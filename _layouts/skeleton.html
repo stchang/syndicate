@@ -1,19 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  {% include common_html_headers %}
   <title>{{ site.title }}: {{ page.title }}</title>
-  <link rel="stylesheet" type="text/css" href="{{ site.baseurl }}/style.css" title="stylesheet" media="screen">
-  <meta name="author" content="Tony Garnock-Jones">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 </head>
-
 <body>
  <div id="page">
+   {% include common_nav %}
+   {% include common_header %}
    <div id="content">
      {{ content }}
    </div>
+   {% include common_footer %}
  </div>
 </body>
-
 </html>
