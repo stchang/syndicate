@@ -317,6 +317,10 @@ small {
     font-size: 80%;
 }
 
+strong {
+    font-weight: bold;
+}
+
 /*---------------------------------------------------------------------------*/
 
 #page.frontpage blockquote h1,
