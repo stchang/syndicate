@@ -1,8 +1,1 @@
 <!-- -*- html -*- -->
-<div class="mainmenu">
-  <ul>
-    <li><a href="{{ site.baseurl }}">home</a></li>
-    <li><a href="{{ site.baseurl }}/code.html">code</a></li>
-  </ul>
-</div>
-<div class="clear"></div>

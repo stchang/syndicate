@@ -1,10 +1,19 @@
 ---
 layout:
-color1: "#4B4B61"
-color2: "#0ac"
-linkcolor: "#28b"
+
+bodybackground: "#bbb"
+pagebackground: "#fff"
+herobackground: "#eee"
+textcolor: "#000"
+codecolor: "#000"
+headercolor: "#BD1550"
+heroheadercolor: "#E97F02"
+herotextcolor: "#000"
+linkcolor: "#5D008F"
+
 textfonts: "'Lora', Georgia"
 headerfonts: "'Bree Serif', Georgia"
+codefonts: "'Inconsolata', monospace"
 ---
 
 /*---------------------------------------------------------------------------*/
@@ -59,43 +68,40 @@ table {
 /*---------------------------------------------------------------------------*/
 
 body {
-    background: #eee;
+    background: {{ page.bodybackground }};
+    color: {{ page.textcolor }};
 }
 
 body, th, td, input, textarea {
     font-family: {{ page.textfonts }};
-    font-size: 10pt;
-    color: {{ page.color1 }};
+    font-size: 12pt;
+    color: {{ page.textcolor }};
 }
 
 h1, h2, h3, h4, h5, h6 {
     font-family: {{ page.headerfonts }};
 }
 
-#page.frontpage h1 {
-    font-size: 56pt;
-}
-
 h1, h2, h3 {
     margin-top: 0.5em;
-    color: {{ page.color2 }};
+    color: {{ page.headercolor }};
     font-weight: normal;
 }
 
 h1 a, h2 a, h3 a {
-    color: {{ page.color2 }};
+    color: {{ page.headercolor }};
 }
 
 h1 {
-    font-size: 3em;
+    font-size: 2.8em;
 }
 
 h2 {
-    font-size: 1.5em;
+    font-size: 2.1em;
 }
 
 h3 {
-    font-size: 1.1em;
+    font-size: 1.4em;
 }
 
 p, ul, ol {
@@ -139,13 +145,13 @@ hr {
 #page {
     max-width: 800px;
     margin: 0 auto;
-    background: #FFFFFF;
-    padding: 0 1em;
+    background: {{ page.pagebackground }};
+    padding: 0 2em;
 }
 
 #header {
     padding-bottom: 2px;
-    border-bottom: solid {{ page.color1 }} 1px;
+    border-bottom: solid {{ page.textcolor }} 1px;
 }
 
 #header h2 {
@@ -165,84 +171,31 @@ hr {
 }
 
 .footnotes {
-    border-top: dashed {{ page.color1 }} 1px;
+    border-top: dashed {{ page.textcolor }} 1px;
     font-size: 0.8em;
     margin-top: 2em;
 }
 
 .content {
     margin: 0;
-    margin-left: 199px;
-    padding-top: 0;
-    padding-right: 15px;
-    padding-left: 15px;
-    padding-bottom: 15px;
+    padding: 0 3em;
     min-height: 400px;
-}
-
-.content h1 {
-    margin: 0;
-    padding-top: 10px;
-    padding-bottom: 5px;
-    text-align: left;
-    font-size: 24pt;
 }
 
 .content h1,
 .content h2,
 .content h3 {
-    margin-left: -30px;
+    margin-left: -3rem;
 }
 
 .content .entry_footer {
     text-align: right;
 }
 
-.sidebar {
-    float: left;
-    width: 150px;
-    padding-top: 30px;
-    padding-right: 10px;
-    padding-bottom: 0px;
-    padding-left: 10px;
-    text-align: left;
-
-    border-left: solid #A5A5AF 1px;
-    margin-left: -1px;
-}
-
-.sidebar ul {
-    margin: 0;
-    padding: 0;
-    list-style: none;
-    font-size: 1.5em;
-    color: {{ page.color2 }};
-}
-
-.sidebar li {
-    padding-bottom: 0.5em;
-}
-
-.sidebar li ul {
-    padding-top: 0.5em;
-    padding-left: 10px;
-    font-size: 0.7em;
-}
-
-.sidebar li li {
-}
-
-.sidebar li a { color: {{ page.linkcolor }}; }
-.sidebar li li a { color: {{ page.color2 }}; }
-
-.sidebar a:hover {
-}
-
 .clear { clear: both; }
 .clearright { clear: right; }
 
 #footer {
-    background: #FFFFFF;
     padding: 0.5em 0;
     margin-bottom: 1em;
 }
@@ -250,7 +203,7 @@ hr {
 #footer p {
     text-align: center;
     font-size: 8pt;
-    color: {{ page.color2 }};
+    color: {{ page.linkcolor }};
 }
 
 div.sitemap_subcategory {
@@ -263,11 +216,6 @@ div.sitemap_subcategory {
 
 .center {
     text-align: center;
-}
-
-.pinkborder {
-    border: solid {{ page.color2 }} 1px;
-    padding: 8px;
 }
 
 img.sitelogo {
@@ -323,7 +271,7 @@ th, td {
 
 th {
     font-weight: normal;
-    color: {{ page.color2 }};
+    color: {{ page.headercolor }};
     text-align: right;
     vertical-align: top;
 }
@@ -352,11 +300,52 @@ td {
 pre {
     padding: 0.5em;
     margin-top: 0.5em;
-    background-color: #eeeeee;
-    color: black;
+    color: {{ page.codecolor }};
     overflow: auto;
+}
+
+pre, code {
+    font-family: {{ page.codefonts }};
+    font-size: 110%;
 }
 
 sup {
     line-height: 0;
+}
+
+small {
+    font-size: 80%;
+}
+
+/*---------------------------------------------------------------------------*/
+
+#page.frontpage blockquote h1,
+#page.frontpage blockquote h2 {
+    text-align: center;
+    margin-left: auto;
+    margin-right: auto;
+    color: {{ page.heroheadercolor }};
+}
+
+#page.frontpage blockquote h1 {
+    font-size: 5.6em;
+    margin-top: 0;
+    padding-top: 0.2em;
+}
+
+#page.frontpage blockquote h2 {
+    font-size: 2.1em;
+}
+
+#page.frontpage blockquote {
+    /* width: 75%; */
+    margin: 0 -2em;
+    background: {{ page.herobackground }};
+    color: {{ page.herotextcolor }};
+    padding: 1em 2em;
+}
+
+div.linkbuttons {
+    text-align: center;
+    padding-top: 1em;
 }
