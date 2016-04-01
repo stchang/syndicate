@@ -353,3 +353,26 @@ div.linkbuttons {
     text-align: center;
     padding-top: 1em;
 }
+
+
+/*---------------------------------------------------------------------------*/
+
+@media (max-width: 600px) {
+    #page {
+        padding: 0 0.5em;
+    }
+
+    .content {
+        padding: 0;
+    }
+
+    .content h1,
+    .content h2,
+    .content h3 {
+        margin-left: 0;
+    }
+
+    #page.frontpage blockquote h1 {
+        font-size: 17vw;
+    }
+}
