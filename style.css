@@ -354,12 +354,12 @@ strong {
 
 #page.frontpage .pagebanner h1 {
     font-size: 5.6em;
-    padding-top: 2rem;
+    padding-top: 1.5rem;
 }
 
 #page.frontpage .pagebanner h2 {
     font-size: 2.1em;
-    padding: 1rem;
+    padding: 0 0 2rem 0;
     display: block;
 }
 
