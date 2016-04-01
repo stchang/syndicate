@@ -360,6 +360,7 @@ strong {
 #page.frontpage .pagebanner h2 {
     font-size: 2.1em;
     padding: 1rem;
+    display: block;
 }
 
 #page.frontpage .pagebanner {
