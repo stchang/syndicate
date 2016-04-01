@@ -6,18 +6,14 @@ link:
   ghrepo: 'https://github.com/tonyg/syndicate'
 ---
 
-> # syn·di·cate
->
-> ## a language for interactive programs
->
-> **noun**  
-> /ˈsindikit/
->
-> 1. a self-organizing group of individuals, companies, corporations or
->    entities formed to transact some specific business, to pursue or
->    promote a shared interest. <small>—[Wikipedia](https://en.wikipedia.org/wiki/Syndicate)</small>
->
-> <div class="linkbuttons"><a href="{{ page.link.ghrepo }}"><img alt="Link to Syndicate github repo" src="{{ site.baseurl }}/img/GitHub-Mark-64px.png"></a></div>
+**noun**  
+/ˈsindikit/
+
+1. a self-organizing group of individuals, companies, corporations or
+   entities formed to transact some specific business, to pursue or
+   promote a shared interest. <small>—[Wikipedia](https://en.wikipedia.org/wiki/Syndicate)</small>
+
+<div class="linkbuttons"><a href="{{ page.link.ghrepo }}"><img alt="Link to Syndicate github repo" src="{{ site.baseurl }}/img/GitHub-Mark-64px.png"></a></div>
 
 # Motivation
 

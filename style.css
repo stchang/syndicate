@@ -323,37 +323,57 @@ strong {
 
 /*---------------------------------------------------------------------------*/
 
-#page.frontpage blockquote h1,
-#page.frontpage blockquote h2 {
-    text-align: center;
-    margin-left: auto;
-    margin-right: auto;
-    color: {{ page.heroheadercolor }};
+.pagebanner h1,
+.pagebanner h2 {
+    margin: 0;
+    padding-top: 0.5rem;
+    padding-bottom: 1rem;
+    color: white;
 }
 
-#page.frontpage blockquote h1 {
-    font-size: 5.6em;
-    margin-top: 0;
-    padding-top: 0.2em;
+.pagebanner h1 {
+    text-align: right;
 }
 
-#page.frontpage blockquote h2 {
-    font-size: 2.1em;
+.pagebanner h2 {
+    display: none;
 }
 
-#page.frontpage blockquote {
-    /* width: 75%; */
+.pagebanner {
     margin: 0 -2em;
-    background: {{ page.herobackground }};
-    color: {{ page.herotextcolor }};
-    padding: 1em 2em;
+    background-color: {{ page.heroheadercolor }};
+    padding: 0em 1em;
 }
+
+#page.frontpage .pagebanner h1,
+#page.frontpage .pagebanner h2 {
+    text-align: center;
+    margin: 0 auto;
+    color: white;
+}
+
+#page.frontpage .pagebanner h1 {
+    font-size: 5.6em;
+    padding-top: 2rem;
+}
+
+#page.frontpage .pagebanner h2 {
+    font-size: 2.1em;
+    padding: 1rem;
+}
+
+#page.frontpage .pagebanner {
+    margin: 0 -2em;
+    background-color: {{ page.heroheadercolor }};
+    padding: 0em 2em;
+}
+
+/*---------------------------------------------------------------------------*/
 
 div.linkbuttons {
     text-align: center;
     padding-top: 1em;
 }
-
 
 /*---------------------------------------------------------------------------*/
 
@@ -372,7 +392,15 @@ div.linkbuttons {
         margin-left: 0;
     }
 
-    #page.frontpage blockquote h1 {
+    .pagebanner {
+        margin: 0 -0.5em;
+    }
+
+    #page.frontpage .pagebanner h1 {
         font-size: 17vw;
+    }
+
+    #page.frontpage .pagebanner {
+        margin: 0 -0.5em;
     }
 }

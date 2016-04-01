@@ -5,4 +5,5 @@ defaults:
     values:
       layout: page
 
-title: Syndicate
+title: "syn·di·cate"
+subtitle: "a language for interactive programs"
