@@ -13,51 +13,76 @@ link:
    entities formed to transact some specific business, to pursue or
    promote a shared interest. <small>—[Wikipedia](https://en.wikipedia.org/wiki/Syndicate)</small>
 
-<div class="linkbuttons"><a href="{{ page.link.ghrepo }}"><img alt="Link to Syndicate github repo" src="{{ site.baseurl }}/img/GitHub-Mark-64px.png"></a></div>
+# Motivation
 
-<!-- # Motivation -->
+Every interactive program needs some way of
 
-<!-- Syndicate is an Actor-based language with features specifically -->
-<!-- designed to help programmers organise their interactive programs. -->
+ - representing the *conversations* it is having as *concurrent
+   components*
 
-<!-- # Trying it out -->
+ - *mapping incoming events* to these components
 
-<!-- The [Syndicate github repository](https://github.com/tonyg/syndicate) -->
-<!-- contains Syndicate implementations for both -->
-<!-- [Racket](http://racket-lang.org/) and -->
-<!-- [ES5](https://en.wikipedia.org/wiki/ECMAScript). -->
+ - managing the *shared understanding* that the components are
+   building as they work towards the program's goal
 
-<!-- ... -->
-<!-- which includes -->
+ - cleaning up shared state after *partial failure* of a component
 
-<!--  - the implementation of the `#lang syndicate` language, in the -->
-<!--    [`syndicate` directory](https://github.com/tonyg/syndicate/tree/master/syndicate/). -->
+ - *scoping* interactions and shared state inside the program
 
-<!--  - a TCP echo server example, which listens for connections on port -->
-<!--    5999 by default, in -->
-<!--    [`syndicate/examples/echo.rkt`](https://github.com/tonyg/syndicate/tree/master/syndicate/examples/echo.rkt). -->
-<!--    Connect to it using, for example, `telnet localhost 5999`. -->
+Existing programming languages lack linguistic support for these
+requirements, leaving the programmer to fend for themselves.
 
-<!--  - a handful of other examples, in -->
-<!--    [`syndicate/examples/`](https://github.com/tonyg/syndicate/tree/master/syndicate/examples/). -->
+Syndicate is a language designed to help organise interactive
+programs.
 
-<!-- ## Compiling and running the code -->
+# Features
 
-<!-- You will need Racket version 6.3 or later. -->
+Syndicate is an Actor-based language offering
 
-<!-- Once you have Racket installed, run -->
+ - pub/sub pattern-based message routing, for mapping events to actors
 
-<!--     raco pkg install syndicate -->
+ - *dataspaces*, stores for semi-structured data, for managing shared
+   state
 
-<!-- to install the package from the Racket package repository, or -->
+ - *state change notifications* for keeping actors informed of changes
+   in dataspaces
 
-<!--     raco pkg install -->
+ - integrated techniques for registering and discovering services and
+   for cleaning up after both graceful and unexpected actor failures
 
-<!-- from the root directory of the Git checkout to install the package -->
-<!-- from a local snapshot. (Alternatively, `make link` does the same thing.) -->
-<!-- This will make `#lang syndicate` available to programs. -->
+ - recursive layering of groups of actors, each group with a private
+   dataspace of its own, for organising larger programs
 
-<!-- At this point, you may load and run any of the example `*.rkt` files -->
-<!-- in the -->
-<!-- [`syndicate/examples/`](https://github.com/tonyg/syndicate/tree/master/syndicate/examples/) -->
-<!-- directory. -->
+Together, these features help address the above challenges.
+
+# Code
+
+Syndicate is implemented both for [Racket](http://racket-lang.org/)
+and for [ES5](https://en.wikipedia.org/wiki/ECMAScript).
+
+<a href="{{ page.link.ghrepo }}"><img class="leftfloat" alt="Link to Syndicate github repo" src="{{ site.baseurl }}/img/GitHub-Mark-64px.png"></a>
+The [Syndicate github repository]({{ page.link.ghrepo }}) contains
+implementations along with some larger example programs.
+
+<div class="clear"></div>
+
+# Papers
+
+<a href="{{ site.baseurl }}/papers/from-events-to-reactions-a-progress-report-20160301-1747.pdf"><img class="leftfloat" src="{{ site.baseurl }}/img/pdf_icon_gen_48x49.png"></a>
+Tony Garnock-Jones, [“From Events To Reactions: A Progress Report”]({{
+site.baseurl
+}}/papers/from-events-to-reactions-a-progress-report-20160301-1747.pdf),
+In: Proc. 9th Int. Workshop on Programming Language Approaches to
+Concurrency and Communication-cEntric Software (PLACES 2016), April
+2016, Eindhoven, Netherlands.
+
+<div class="clear"></div>
+
+<a href="{{ site.baseurl }}/papers/coordinated-concurrent-programming-in-syndicate-20160111-1409.pdf"><img class="leftfloat" src="{{ site.baseurl }}/img/pdf_icon_gen_48x49.png"></a>
+Tony Garnock-Jones and Matthias Felleisen,
+[“Coordinated Concurrent Programming in Syndicate”]({{ site.baseurl
+}}/papers/coordinated-concurrent-programming-in-syndicate-20160111-1409.pdf),
+In: Proc. 25th European Symposium on Programming (ESOP 2016), April
+2016, Eindhoven, Netherlands.
+
+<div class="clear"></div>
