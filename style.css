@@ -373,6 +373,26 @@ em {
     padding: 0em 2em;
 }
 
+#page.frontpage .frontpage_code_examples {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+}
+
+#page.frontpage .frontpage_code_examples div {
+    flex-grow: 1;
+    text-align: center;
+    background: #eee;
+    margin: 0.2em;
+}
+
+#page.frontpage .frontpage_code_examples pre {
+    font-size: 105%;
+    display: inline-block;
+    text-align: left;
+    margin: 0;
+}
+
 /*---------------------------------------------------------------------------*/
 
 div.linkbuttons {

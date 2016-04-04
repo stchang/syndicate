@@ -7,3 +7,10 @@ defaults:
 
 title: "syn·di·cate"
 subtitle: "a language for interactive programs"
+
+markdown: kramdown
+highlighter: rouge
+
+kramdown:
+  input: GFM
+  hard_wrap: false
