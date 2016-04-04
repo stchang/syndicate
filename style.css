@@ -377,6 +377,7 @@ em {
     display: flex;
     flex-direction: row;
     flex-wrap: wrap;
+    margin-top: 1em;
 }
 
 #page.frontpage .frontpage_code_examples div {
