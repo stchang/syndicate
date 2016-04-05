@@ -134,3 +134,7 @@ Tony Garnock-Jones, Sam Tobin-Hochstadt, and Matthias Felleisen,
 In: Proc. ESOP 2014, April 2016, Eindhoven, Netherlands.
 
 <div class="clear"></div>
+
+## Contact
+
+Please feel free to email me at <a href="mailto:tonyg@ccs.neu.edu">tonyg@ccs.neu.edu</a>.
