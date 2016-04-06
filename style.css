@@ -335,6 +335,10 @@ em {
     color: white;
 }
 
+.pagebanner a {
+    color: white;
+}
+
 .pagebanner h1 {
     text-align: right;
 }

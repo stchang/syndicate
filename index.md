@@ -92,6 +92,11 @@ The full code for the Racket example is
 and for the JavaScript example,
 [demo-bankaccount.js](https://github.com/tonyg/syndicate/blob/master/js/compiler/demo-bankaccount.js).
 
+## Live Syndicate/js demos
+
+[This page](examples/) links to in-browser runnable demos (and source
+code) of Syndicate/js programs.
+
 ## Code
 
 Syndicate is implemented both for [Racket](http://racket-lang.org/)
