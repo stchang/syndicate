@@ -110,9 +110,7 @@ implementations along with some larger example programs.
 
 ## Documentation
 
-Forthcoming.
-
-<!-- An early draft is available [here]({{ page.link.docs }}). -->
+An early draft is available [here]({{ page.link.docs }}).
 
 ## Papers
 
