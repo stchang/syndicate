@@ -110,7 +110,9 @@ implementations along with some larger example programs.
 
 ## Documentation
 
-An early draft is available [here]({{ page.link.docs }}).
+The system is still somewhat in flux, and documentation is still being
+written. A draft of the documentation for the Racket implementation of
+Syndicate is available [here]({{ page.link.docs }}).
 
 ## Papers
 
