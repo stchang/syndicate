@@ -120,7 +120,7 @@ Syndicate is available [here]({{ page.link.docs }}).
 Tony Garnock-Jones, [“From Events To Reactions: A Progress Report”]({{
 site.baseurl
 }}/papers/from-events-to-reactions-a-progress-report-20160301-1747.pdf),
-In: Proc. PLACES 2016 (workshop), April 2016, Eindhoven, Netherlands.
+In: Proc. PLACES 2016 (workshop), April 2016, Eindhoven, Netherlands. ([PDF]({{ site.baseurl }}/papers/from-events-to-reactions-a-progress-report-20160301-1747.pdf); [Slides]({{ site.baseurl }}/papers/places-2016-slides.pdf))
 
 <div class="clear"></div>
 
@@ -128,7 +128,7 @@ In: Proc. PLACES 2016 (workshop), April 2016, Eindhoven, Netherlands.
 Tony Garnock-Jones and Matthias Felleisen,
 [“Coordinated Concurrent Programming in Syndicate”]({{ site.baseurl
 }}/papers/coordinated-concurrent-programming-in-syndicate-20160111-1409.pdf),
-In: Proc. ESOP 2016, April 2016, Eindhoven, Netherlands.
+In: Proc. ESOP 2016, April 2016, Eindhoven, Netherlands. ([PDF]({{ site.baseurl }}/papers/coordinated-concurrent-programming-in-syndicate-20160111-1409.pdf); [Slides]({{ site.baseurl }}/papers/esop-2016-slides.pdf))
 
 <div class="clear"></div>
 
@@ -136,7 +136,7 @@ In: Proc. ESOP 2016, April 2016, Eindhoven, Netherlands.
 Tony Garnock-Jones, Sam Tobin-Hochstadt, and Matthias Felleisen,
 [“The Network as a Language Construct”]({{ site.baseurl
 }}/papers/network-as-language-construct-20140117-1204.pdf),
-In: Proc. ESOP 2014, April 2016, Eindhoven, Netherlands.
+In: Proc. ESOP 2014, April 2016, Eindhoven, Netherlands. ([PDF]({{ site.baseurl }}/papers/network-as-language-construct-20140117-1204.pdf); [Slides]({{ site.baseurl }}/papers/esop-2014-slides.pdf))
 
 <div class="clear"></div>
 
