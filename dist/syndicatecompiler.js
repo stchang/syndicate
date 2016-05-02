@@ -524,9 +524,6 @@ var isArray = require('isarray')
 exports.Buffer = Buffer
 exports.SlowBuffer = SlowBuffer
 exports.INSPECT_MAX_BYTES = 50
-Buffer.poolSize = 8192 // not used by this implementation
-
-var rootParent = {}
 
 /**
  * If `Buffer.TYPED_ARRAY_SUPPORT`:
@@ -556,6 +553,11 @@ Buffer.TYPED_ARRAY_SUPPORT = global.TYPED_ARRAY_SUPPORT !== undefined
   ? global.TYPED_ARRAY_SUPPORT
   : typedArraySupport()
 
+/*
+ * Export kMaxLength after typed array support is determined.
+ */
+exports.kMaxLength = kMaxLength()
+
 function typedArraySupport () {
   try {
     var arr = new Uint8Array(1)
@@ -574,6 +576,25 @@ function kMaxLength () {
     : 0x3fffffff
 }
 
+function createBuffer (that, length) {
+  if (kMaxLength() < length) {
+    throw new RangeError('Invalid typed array length')
+  }
+  if (Buffer.TYPED_ARRAY_SUPPORT) {
+    // Return an augmented `Uint8Array` instance, for best performance
+    that = new Uint8Array(length)
+    that.__proto__ = Buffer.prototype
+  } else {
+    // Fallback: Return an object instance of the Buffer class
+    if (that === null) {
+      that = new Buffer(length)
+    }
+    that.length = length
+  }
+
+  return that
+}
+
 /**
  * The Buffer constructor returns instances of `Uint8Array` that have their
  * prototype changed to `Buffer.prototype`. Furthermore, `Buffer` is a subclass of
@@ -583,31 +604,25 @@ function kMaxLength () {
  *
  * The `Uint8Array` prototype remains unmodified.
  */
-function Buffer (arg) {
-  if (!(this instanceof Buffer)) {
-    // Avoid going through an ArgumentsAdaptorTrampoline in the common case.
-    if (arguments.length > 1) return new Buffer(arg, arguments[1])
-    return new Buffer(arg)
-  }
 
-  if (!Buffer.TYPED_ARRAY_SUPPORT) {
-    this.length = 0
-    this.parent = undefined
+function Buffer (arg, encodingOrOffset, length) {
+  if (!Buffer.TYPED_ARRAY_SUPPORT && !(this instanceof Buffer)) {
+    return new Buffer(arg, encodingOrOffset, length)
   }
 
   // Common case.
   if (typeof arg === 'number') {
-    return fromNumber(this, arg)
+    if (typeof encodingOrOffset === 'string') {
+      throw new Error(
+        'If encoding is specified then the first argument must be a string'
+      )
+    }
+    return allocUnsafe(this, arg)
   }
-
-  // Slightly less common case.
-  if (typeof arg === 'string') {
-    return fromString(this, arg, arguments.length > 1 ? arguments[1] : 'utf8')
-  }
-
-  // Unusual.
-  return fromObject(this, arg)
+  return from(this, arg, encodingOrOffset, length)
 }
+
+Buffer.poolSize = 8192 // not used by this implementation
 
 // TODO: Legacy, not needed anymore. Remove in next major version.
 Buffer._augment = function (arr) {
@@ -615,143 +630,182 @@ Buffer._augment = function (arr) {
   return arr
 }
 
-function fromNumber (that, length) {
-  that = allocate(that, length < 0 ? 0 : checked(length) | 0)
+function from (that, value, encodingOrOffset, length) {
+  if (typeof value === 'number') {
+    throw new TypeError('"value" argument must not be a number')
+  }
+
+  if (typeof ArrayBuffer !== 'undefined' && value instanceof ArrayBuffer) {
+    return fromArrayBuffer(that, value, encodingOrOffset, length)
+  }
+
+  if (typeof value === 'string') {
+    return fromString(that, value, encodingOrOffset)
+  }
+
+  return fromObject(that, value)
+}
+
+/**
+ * Functionally equivalent to Buffer(arg, encoding) but throws a TypeError
+ * if value is a number.
+ * Buffer.from(str[, encoding])
+ * Buffer.from(array)
+ * Buffer.from(buffer)
+ * Buffer.from(arrayBuffer[, byteOffset[, length]])
+ **/
+Buffer.from = function (value, encodingOrOffset, length) {
+  return from(null, value, encodingOrOffset, length)
+}
+
+if (Buffer.TYPED_ARRAY_SUPPORT) {
+  Buffer.prototype.__proto__ = Uint8Array.prototype
+  Buffer.__proto__ = Uint8Array
+  if (typeof Symbol !== 'undefined' && Symbol.species &&
+      Buffer[Symbol.species] === Buffer) {
+    // Fix subarray() in ES2016. See: https://github.com/feross/buffer/pull/97
+    Object.defineProperty(Buffer, Symbol.species, {
+      value: null,
+      configurable: true
+    })
+  }
+}
+
+function assertSize (size) {
+  if (typeof size !== 'number') {
+    throw new TypeError('"size" argument must be a number')
+  }
+}
+
+function alloc (that, size, fill, encoding) {
+  assertSize(size)
+  if (size <= 0) {
+    return createBuffer(that, size)
+  }
+  if (fill !== undefined) {
+    // Only pay attention to encoding if it's a string. This
+    // prevents accidentally sending in a number that would
+    // be interpretted as a start offset.
+    return typeof encoding === 'string'
+      ? createBuffer(that, size).fill(fill, encoding)
+      : createBuffer(that, size).fill(fill)
+  }
+  return createBuffer(that, size)
+}
+
+/**
+ * Creates a new filled Buffer instance.
+ * alloc(size[, fill[, encoding]])
+ **/
+Buffer.alloc = function (size, fill, encoding) {
+  return alloc(null, size, fill, encoding)
+}
+
+function allocUnsafe (that, size) {
+  assertSize(size)
+  that = createBuffer(that, size < 0 ? 0 : checked(size) | 0)
   if (!Buffer.TYPED_ARRAY_SUPPORT) {
-    for (var i = 0; i < length; i++) {
+    for (var i = 0; i < size; i++) {
       that[i] = 0
     }
   }
   return that
 }
 
-function fromString (that, string, encoding) {
-  if (typeof encoding !== 'string' || encoding === '') encoding = 'utf8'
+/**
+ * Equivalent to Buffer(num), by default creates a non-zero-filled Buffer instance.
+ * */
+Buffer.allocUnsafe = function (size) {
+  return allocUnsafe(null, size)
+}
+/**
+ * Equivalent to SlowBuffer(num), by default creates a non-zero-filled Buffer instance.
+ */
+Buffer.allocUnsafeSlow = function (size) {
+  return allocUnsafe(null, size)
+}
 
-  // Assumption: byteLength() return value is always < kMaxLength.
+function fromString (that, string, encoding) {
+  if (typeof encoding !== 'string' || encoding === '') {
+    encoding = 'utf8'
+  }
+
+  if (!Buffer.isEncoding(encoding)) {
+    throw new TypeError('"encoding" must be a valid string encoding')
+  }
+
   var length = byteLength(string, encoding) | 0
-  that = allocate(that, length)
+  that = createBuffer(that, length)
 
   that.write(string, encoding)
   return that
 }
 
-function fromObject (that, object) {
-  if (Buffer.isBuffer(object)) return fromBuffer(that, object)
-
-  if (isArray(object)) return fromArray(that, object)
-
-  if (object == null) {
-    throw new TypeError('must start with number, buffer, array or string')
-  }
-
-  if (typeof ArrayBuffer !== 'undefined') {
-    if (object.buffer instanceof ArrayBuffer) {
-      return fromTypedArray(that, object)
-    }
-    if (object instanceof ArrayBuffer) {
-      return fromArrayBuffer(that, object)
-    }
-  }
-
-  if (object.length) return fromArrayLike(that, object)
-
-  return fromJsonObject(that, object)
-}
-
-function fromBuffer (that, buffer) {
-  var length = checked(buffer.length) | 0
-  that = allocate(that, length)
-  buffer.copy(that, 0, 0, length)
-  return that
-}
-
-function fromArray (that, array) {
-  var length = checked(array.length) | 0
-  that = allocate(that, length)
-  for (var i = 0; i < length; i += 1) {
-    that[i] = array[i] & 255
-  }
-  return that
-}
-
-// Duplicate of fromArray() to keep fromArray() monomorphic.
-function fromTypedArray (that, array) {
-  var length = checked(array.length) | 0
-  that = allocate(that, length)
-  // Truncating the elements is probably not what people expect from typed
-  // arrays with BYTES_PER_ELEMENT > 1 but it's compatible with the behavior
-  // of the old Buffer constructor.
-  for (var i = 0; i < length; i += 1) {
-    that[i] = array[i] & 255
-  }
-  return that
-}
-
-function fromArrayBuffer (that, array) {
-  array.byteLength // this throws if `array` is not a valid ArrayBuffer
-
-  if (Buffer.TYPED_ARRAY_SUPPORT) {
-    // Return an augmented `Uint8Array` instance, for best performance
-    that = new Uint8Array(array)
-    that.__proto__ = Buffer.prototype
-  } else {
-    // Fallback: Return an object instance of the Buffer class
-    that = fromTypedArray(that, new Uint8Array(array))
-  }
-  return that
-}
-
 function fromArrayLike (that, array) {
   var length = checked(array.length) | 0
-  that = allocate(that, length)
+  that = createBuffer(that, length)
   for (var i = 0; i < length; i += 1) {
     that[i] = array[i] & 255
   }
   return that
 }
 
-// Deserialize { type: 'Buffer', data: [1,2,3,...] } into a Buffer object.
-// Returns a zero-length buffer for inputs that don't conform to the spec.
-function fromJsonObject (that, object) {
-  var array
-  var length = 0
+function fromArrayBuffer (that, array, byteOffset, length) {
+  array.byteLength // this throws if `array` is not a valid ArrayBuffer
 
-  if (object.type === 'Buffer' && isArray(object.data)) {
-    array = object.data
-    length = checked(array.length) | 0
+  if (byteOffset < 0 || array.byteLength < byteOffset) {
+    throw new RangeError('\'offset\' is out of bounds')
   }
-  that = allocate(that, length)
 
-  for (var i = 0; i < length; i += 1) {
-    that[i] = array[i] & 255
+  if (array.byteLength < byteOffset + (length || 0)) {
+    throw new RangeError('\'length\' is out of bounds')
   }
-  return that
-}
 
-if (Buffer.TYPED_ARRAY_SUPPORT) {
-  Buffer.prototype.__proto__ = Uint8Array.prototype
-  Buffer.__proto__ = Uint8Array
-} else {
-  // pre-set for values that may exist in the future
-  Buffer.prototype.length = undefined
-  Buffer.prototype.parent = undefined
-}
+  if (length === undefined) {
+    array = new Uint8Array(array, byteOffset)
+  } else {
+    array = new Uint8Array(array, byteOffset, length)
+  }
 
-function allocate (that, length) {
   if (Buffer.TYPED_ARRAY_SUPPORT) {
     // Return an augmented `Uint8Array` instance, for best performance
-    that = new Uint8Array(length)
+    that = array
     that.__proto__ = Buffer.prototype
   } else {
     // Fallback: Return an object instance of the Buffer class
-    that.length = length
+    that = fromArrayLike(that, array)
+  }
+  return that
+}
+
+function fromObject (that, obj) {
+  if (Buffer.isBuffer(obj)) {
+    var len = checked(obj.length) | 0
+    that = createBuffer(that, len)
+
+    if (that.length === 0) {
+      return that
+    }
+
+    obj.copy(that, 0, 0, len)
+    return that
   }
 
-  var fromPool = length !== 0 && length <= Buffer.poolSize >>> 1
-  if (fromPool) that.parent = rootParent
+  if (obj) {
+    if ((typeof ArrayBuffer !== 'undefined' &&
+        obj.buffer instanceof ArrayBuffer) || 'length' in obj) {
+      if (typeof obj.length !== 'number' || isnan(obj.length)) {
+        return createBuffer(that, 0)
+      }
+      return fromArrayLike(that, obj)
+    }
 
-  return that
+    if (obj.type === 'Buffer' && isArray(obj.data)) {
+      return fromArrayLike(that, obj.data)
+    }
+  }
+
+  throw new TypeError('First argument must be a string, Buffer, ArrayBuffer, Array, or array-like object.')
 }
 
 function checked (length) {
@@ -764,12 +818,11 @@ function checked (length) {
   return length | 0
 }
 
-function SlowBuffer (subject, encoding) {
-  if (!(this instanceof SlowBuffer)) return new SlowBuffer(subject, encoding)
-
-  var buf = new Buffer(subject, encoding)
-  delete buf.parent
-  return buf
+function SlowBuffer (length) {
+  if (+length != length) { // eslint-disable-line eqeqeq
+    length = 0
+  }
+  return Buffer.alloc(+length)
 }
 
 Buffer.isBuffer = function isBuffer (b) {
@@ -786,17 +839,12 @@ Buffer.compare = function compare (a, b) {
   var x = a.length
   var y = b.length
 
-  var i = 0
-  var len = Math.min(x, y)
-  while (i < len) {
-    if (a[i] !== b[i]) break
-
-    ++i
-  }
-
-  if (i !== len) {
-    x = a[i]
-    y = b[i]
+  for (var i = 0, len = Math.min(x, y); i < len; ++i) {
+    if (a[i] !== b[i]) {
+      x = a[i]
+      y = b[i]
+      break
+    }
   }
 
   if (x < y) return -1
@@ -824,10 +872,12 @@ Buffer.isEncoding = function isEncoding (encoding) {
 }
 
 Buffer.concat = function concat (list, length) {
-  if (!isArray(list)) throw new TypeError('list argument must be an Array of Buffers.')
+  if (!isArray(list)) {
+    throw new TypeError('"list" argument must be an Array of Buffers')
+  }
 
   if (list.length === 0) {
-    return new Buffer(0)
+    return Buffer.alloc(0)
   }
 
   var i
@@ -838,18 +888,30 @@ Buffer.concat = function concat (list, length) {
     }
   }
 
-  var buf = new Buffer(length)
+  var buffer = Buffer.allocUnsafe(length)
   var pos = 0
   for (i = 0; i < list.length; i++) {
-    var item = list[i]
-    item.copy(buf, pos)
-    pos += item.length
+    var buf = list[i]
+    if (!Buffer.isBuffer(buf)) {
+      throw new TypeError('"list" argument must be an Array of Buffers')
+    }
+    buf.copy(buffer, pos)
+    pos += buf.length
   }
-  return buf
+  return buffer
 }
 
 function byteLength (string, encoding) {
-  if (typeof string !== 'string') string = '' + string
+  if (Buffer.isBuffer(string)) {
+    return string.length
+  }
+  if (typeof ArrayBuffer !== 'undefined' && typeof ArrayBuffer.isView === 'function' &&
+      (ArrayBuffer.isView(string) || string instanceof ArrayBuffer)) {
+    return string.byteLength
+  }
+  if (typeof string !== 'string') {
+    string = '' + string
+  }
 
   var len = string.length
   if (len === 0) return 0
@@ -866,6 +928,7 @@ function byteLength (string, encoding) {
         return len
       case 'utf8':
       case 'utf-8':
+      case undefined:
         return utf8ToBytes(string).length
       case 'ucs2':
       case 'ucs-2':
@@ -888,13 +951,39 @@ Buffer.byteLength = byteLength
 function slowToString (encoding, start, end) {
   var loweredCase = false
 
-  start = start | 0
-  end = end === undefined || end === Infinity ? this.length : end | 0
+  // No need to verify that "this.length <= MAX_UINT32" since it's a read-only
+  // property of a typed array.
+
+  // This behaves neither like String nor Uint8Array in that we set start/end
+  // to their upper/lower bounds if the value passed is out of range.
+  // undefined is handled specially as per ECMA-262 6th Edition,
+  // Section 13.3.3.7 Runtime Semantics: KeyedBindingInitialization.
+  if (start === undefined || start < 0) {
+    start = 0
+  }
+  // Return early if start > this.length. Done here to prevent potential uint32
+  // coercion fail below.
+  if (start > this.length) {
+    return ''
+  }
+
+  if (end === undefined || end > this.length) {
+    end = this.length
+  }
+
+  if (end <= 0) {
+    return ''
+  }
+
+  // Force coersion to uint32. This will also coerce falsey/NaN values to 0.
+  end >>>= 0
+  start >>>= 0
+
+  if (end <= start) {
+    return ''
+  }
 
   if (!encoding) encoding = 'utf8'
-  if (start < 0) start = 0
-  if (end > this.length) end = this.length
-  if (end <= start) return ''
 
   while (true) {
     switch (encoding) {
@@ -932,6 +1021,35 @@ function slowToString (encoding, start, end) {
 // Buffer instances.
 Buffer.prototype._isBuffer = true
 
+function swap (b, n, m) {
+  var i = b[n]
+  b[n] = b[m]
+  b[m] = i
+}
+
+Buffer.prototype.swap16 = function swap16 () {
+  var len = this.length
+  if (len % 2 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 16-bits')
+  }
+  for (var i = 0; i < len; i += 2) {
+    swap(this, i, i + 1)
+  }
+  return this
+}
+
+Buffer.prototype.swap32 = function swap32 () {
+  var len = this.length
+  if (len % 4 !== 0) {
+    throw new RangeError('Buffer size must be a multiple of 32-bits')
+  }
+  for (var i = 0; i < len; i += 4) {
+    swap(this, i, i + 3)
+    swap(this, i + 1, i + 2)
+  }
+  return this
+}
+
 Buffer.prototype.toString = function toString () {
   var length = this.length | 0
   if (length === 0) return ''
@@ -955,15 +1073,114 @@ Buffer.prototype.inspect = function inspect () {
   return '<Buffer ' + str + '>'
 }
 
-Buffer.prototype.compare = function compare (b) {
-  if (!Buffer.isBuffer(b)) throw new TypeError('Argument must be a Buffer')
-  if (this === b) return 0
-  return Buffer.compare(this, b)
+Buffer.prototype.compare = function compare (target, start, end, thisStart, thisEnd) {
+  if (!Buffer.isBuffer(target)) {
+    throw new TypeError('Argument must be a Buffer')
+  }
+
+  if (start === undefined) {
+    start = 0
+  }
+  if (end === undefined) {
+    end = target ? target.length : 0
+  }
+  if (thisStart === undefined) {
+    thisStart = 0
+  }
+  if (thisEnd === undefined) {
+    thisEnd = this.length
+  }
+
+  if (start < 0 || end > target.length || thisStart < 0 || thisEnd > this.length) {
+    throw new RangeError('out of range index')
+  }
+
+  if (thisStart >= thisEnd && start >= end) {
+    return 0
+  }
+  if (thisStart >= thisEnd) {
+    return -1
+  }
+  if (start >= end) {
+    return 1
+  }
+
+  start >>>= 0
+  end >>>= 0
+  thisStart >>>= 0
+  thisEnd >>>= 0
+
+  if (this === target) return 0
+
+  var x = thisEnd - thisStart
+  var y = end - start
+  var len = Math.min(x, y)
+
+  var thisCopy = this.slice(thisStart, thisEnd)
+  var targetCopy = target.slice(start, end)
+
+  for (var i = 0; i < len; ++i) {
+    if (thisCopy[i] !== targetCopy[i]) {
+      x = thisCopy[i]
+      y = targetCopy[i]
+      break
+    }
+  }
+
+  if (x < y) return -1
+  if (y < x) return 1
+  return 0
 }
 
-Buffer.prototype.indexOf = function indexOf (val, byteOffset) {
-  if (byteOffset > 0x7fffffff) byteOffset = 0x7fffffff
-  else if (byteOffset < -0x80000000) byteOffset = -0x80000000
+function arrayIndexOf (arr, val, byteOffset, encoding) {
+  var indexSize = 1
+  var arrLength = arr.length
+  var valLength = val.length
+
+  if (encoding !== undefined) {
+    encoding = String(encoding).toLowerCase()
+    if (encoding === 'ucs2' || encoding === 'ucs-2' ||
+        encoding === 'utf16le' || encoding === 'utf-16le') {
+      if (arr.length < 2 || val.length < 2) {
+        return -1
+      }
+      indexSize = 2
+      arrLength /= 2
+      valLength /= 2
+      byteOffset /= 2
+    }
+  }
+
+  function read (buf, i) {
+    if (indexSize === 1) {
+      return buf[i]
+    } else {
+      return buf.readUInt16BE(i * indexSize)
+    }
+  }
+
+  var foundIndex = -1
+  for (var i = 0; byteOffset + i < arrLength; i++) {
+    if (read(arr, byteOffset + i) === read(val, foundIndex === -1 ? 0 : i - foundIndex)) {
+      if (foundIndex === -1) foundIndex = i
+      if (i - foundIndex + 1 === valLength) return (byteOffset + foundIndex) * indexSize
+    } else {
+      if (foundIndex !== -1) i -= i - foundIndex
+      foundIndex = -1
+    }
+  }
+  return -1
+}
+
+Buffer.prototype.indexOf = function indexOf (val, byteOffset, encoding) {
+  if (typeof byteOffset === 'string') {
+    encoding = byteOffset
+    byteOffset = 0
+  } else if (byteOffset > 0x7fffffff) {
+    byteOffset = 0x7fffffff
+  } else if (byteOffset < -0x80000000) {
+    byteOffset = -0x80000000
+  }
   byteOffset >>= 0
 
   if (this.length === 0) return -1
@@ -973,33 +1190,28 @@ Buffer.prototype.indexOf = function indexOf (val, byteOffset) {
   if (byteOffset < 0) byteOffset = Math.max(this.length + byteOffset, 0)
 
   if (typeof val === 'string') {
-    if (val.length === 0) return -1 // special case: looking for empty string always fails
-    return String.prototype.indexOf.call(this, val, byteOffset)
+    val = Buffer.from(val, encoding)
   }
+
   if (Buffer.isBuffer(val)) {
-    return arrayIndexOf(this, val, byteOffset)
+    // special case: looking for empty string/buffer always fails
+    if (val.length === 0) {
+      return -1
+    }
+    return arrayIndexOf(this, val, byteOffset, encoding)
   }
   if (typeof val === 'number') {
     if (Buffer.TYPED_ARRAY_SUPPORT && Uint8Array.prototype.indexOf === 'function') {
       return Uint8Array.prototype.indexOf.call(this, val, byteOffset)
     }
-    return arrayIndexOf(this, [ val ], byteOffset)
-  }
-
-  function arrayIndexOf (arr, val, byteOffset) {
-    var foundIndex = -1
-    for (var i = 0; byteOffset + i < arr.length; i++) {
-      if (arr[byteOffset + i] === val[foundIndex === -1 ? 0 : i - foundIndex]) {
-        if (foundIndex === -1) foundIndex = i
-        if (i - foundIndex + 1 === val.length) return byteOffset + foundIndex
-      } else {
-        foundIndex = -1
-      }
-    }
-    return -1
+    return arrayIndexOf(this, [ val ], byteOffset, encoding)
   }
 
   throw new TypeError('val must be string, number or Buffer')
+}
+
+Buffer.prototype.includes = function includes (val, byteOffset, encoding) {
+  return this.indexOf(val, byteOffset, encoding) !== -1
 }
 
 function hexWrite (buf, string, offset, length) {
@@ -1023,7 +1235,7 @@ function hexWrite (buf, string, offset, length) {
   }
   for (var i = 0; i < length; i++) {
     var parsed = parseInt(string.substr(i * 2, 2), 16)
-    if (isNaN(parsed)) throw new Error('Invalid hex string')
+    if (isNaN(parsed)) return i
     buf[offset + i] = parsed
   }
   return i
@@ -1072,17 +1284,16 @@ Buffer.prototype.write = function write (string, offset, length, encoding) {
     }
   // legacy write(string, encoding, offset, length) - remove in v0.13
   } else {
-    var swap = encoding
-    encoding = offset
-    offset = length | 0
-    length = swap
+    throw new Error(
+      'Buffer.write(string, encoding, offset[, length]) is no longer supported'
+    )
   }
 
   var remaining = this.length - offset
   if (length === undefined || length > remaining) length = remaining
 
   if ((string.length > 0 && (length < 0 || offset < 0)) || offset > this.length) {
-    throw new RangeError('attempt to write outside buffer bounds')
+    throw new RangeError('Attempt to write outside buffer bounds')
   }
 
   if (!encoding) encoding = 'utf8'
@@ -1307,8 +1518,6 @@ Buffer.prototype.slice = function slice (start, end) {
     }
   }
 
-  if (newBuf.length) newBuf.parent = this.parent || this
-
   return newBuf
 }
 
@@ -1477,16 +1686,19 @@ Buffer.prototype.readDoubleBE = function readDoubleBE (offset, noAssert) {
 }
 
 function checkInt (buf, value, offset, ext, max, min) {
-  if (!Buffer.isBuffer(buf)) throw new TypeError('buffer must be a Buffer instance')
-  if (value > max || value < min) throw new RangeError('value is out of bounds')
-  if (offset + ext > buf.length) throw new RangeError('index out of range')
+  if (!Buffer.isBuffer(buf)) throw new TypeError('"buffer" argument must be a Buffer instance')
+  if (value > max || value < min) throw new RangeError('"value" argument is out of bounds')
+  if (offset + ext > buf.length) throw new RangeError('Index out of range')
 }
 
 Buffer.prototype.writeUIntLE = function writeUIntLE (value, offset, byteLength, noAssert) {
   value = +value
   offset = offset | 0
   byteLength = byteLength | 0
-  if (!noAssert) checkInt(this, value, offset, byteLength, Math.pow(2, 8 * byteLength), 0)
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
+    checkInt(this, value, offset, byteLength, maxBytes, 0)
+  }
 
   var mul = 1
   var i = 0
@@ -1502,7 +1714,10 @@ Buffer.prototype.writeUIntBE = function writeUIntBE (value, offset, byteLength, 
   value = +value
   offset = offset | 0
   byteLength = byteLength | 0
-  if (!noAssert) checkInt(this, value, offset, byteLength, Math.pow(2, 8 * byteLength), 0)
+  if (!noAssert) {
+    var maxBytes = Math.pow(2, 8 * byteLength) - 1
+    checkInt(this, value, offset, byteLength, maxBytes, 0)
+  }
 
   var i = byteLength - 1
   var mul = 1
@@ -1605,9 +1820,12 @@ Buffer.prototype.writeIntLE = function writeIntLE (value, offset, byteLength, no
 
   var i = 0
   var mul = 1
-  var sub = value < 0 ? 1 : 0
+  var sub = 0
   this[offset] = value & 0xFF
   while (++i < byteLength && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i - 1] !== 0) {
+      sub = 1
+    }
     this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
   }
 
@@ -1625,9 +1843,12 @@ Buffer.prototype.writeIntBE = function writeIntBE (value, offset, byteLength, no
 
   var i = byteLength - 1
   var mul = 1
-  var sub = value < 0 ? 1 : 0
+  var sub = 0
   this[offset + i] = value & 0xFF
   while (--i >= 0 && (mul *= 0x100)) {
+    if (value < 0 && sub === 0 && this[offset + i + 1] !== 0) {
+      sub = 1
+    }
     this[offset + i] = ((value / mul) >> 0) - sub & 0xFF
   }
 
@@ -1702,8 +1923,8 @@ Buffer.prototype.writeInt32BE = function writeInt32BE (value, offset, noAssert) 
 }
 
 function checkIEEE754 (buf, value, offset, ext, max, min) {
-  if (offset + ext > buf.length) throw new RangeError('index out of range')
-  if (offset < 0) throw new RangeError('index out of range')
+  if (offset + ext > buf.length) throw new RangeError('Index out of range')
+  if (offset < 0) throw new RangeError('Index out of range')
 }
 
 function writeFloat (buf, value, offset, littleEndian, noAssert) {
@@ -1787,31 +2008,63 @@ Buffer.prototype.copy = function copy (target, targetStart, start, end) {
   return len
 }
 
-// fill(value, start=0, end=buffer.length)
-Buffer.prototype.fill = function fill (value, start, end) {
-  if (!value) value = 0
-  if (!start) start = 0
-  if (!end) end = this.length
+// Usage:
+//    buffer.fill(number[, offset[, end]])
+//    buffer.fill(buffer[, offset[, end]])
+//    buffer.fill(string[, offset[, end]][, encoding])
+Buffer.prototype.fill = function fill (val, start, end, encoding) {
+  // Handle string cases:
+  if (typeof val === 'string') {
+    if (typeof start === 'string') {
+      encoding = start
+      start = 0
+      end = this.length
+    } else if (typeof end === 'string') {
+      encoding = end
+      end = this.length
+    }
+    if (val.length === 1) {
+      var code = val.charCodeAt(0)
+      if (code < 256) {
+        val = code
+      }
+    }
+    if (encoding !== undefined && typeof encoding !== 'string') {
+      throw new TypeError('encoding must be a string')
+    }
+    if (typeof encoding === 'string' && !Buffer.isEncoding(encoding)) {
+      throw new TypeError('Unknown encoding: ' + encoding)
+    }
+  } else if (typeof val === 'number') {
+    val = val & 255
+  }
 
-  if (end < start) throw new RangeError('end < start')
+  // Invalid ranges are not set to a default, so can range check early.
+  if (start < 0 || this.length < start || this.length < end) {
+    throw new RangeError('Out of range index')
+  }
 
-  // Fill 0 bytes; we're done
-  if (end === start) return
-  if (this.length === 0) return
+  if (end <= start) {
+    return this
+  }
 
-  if (start < 0 || start >= this.length) throw new RangeError('start out of bounds')
-  if (end < 0 || end > this.length) throw new RangeError('end out of bounds')
+  start = start >>> 0
+  end = end === undefined ? this.length : end >>> 0
+
+  if (!val) val = 0
 
   var i
-  if (typeof value === 'number') {
+  if (typeof val === 'number') {
     for (i = start; i < end; i++) {
-      this[i] = value
+      this[i] = val
     }
   } else {
-    var bytes = utf8ToBytes(value.toString())
+    var bytes = Buffer.isBuffer(val)
+      ? val
+      : utf8ToBytes(new Buffer(val, encoding).toString())
     var len = bytes.length
-    for (i = start; i < end; i++) {
-      this[i] = bytes[i % len]
+    for (i = 0; i < end - start; i++) {
+      this[i + start] = bytes[i % len]
     }
   }
 
@@ -1962,126 +2215,121 @@ function blitBuffer (src, dst, offset, length) {
   return i
 }
 
+function isnan (val) {
+  return val !== val // eslint-disable-line no-self-compare
+}
+
 }).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
 },{"base64-js":5,"ieee754":6,"isarray":7}],5:[function(require,module,exports){
-;(function (exports) {
-  'use strict'
+'use strict'
 
-  var lookup = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+exports.toByteArray = toByteArray
+exports.fromByteArray = fromByteArray
 
-  var Arr = (typeof Uint8Array !== 'undefined')
-    ? Uint8Array
-    : Array
+var lookup = []
+var revLookup = []
+var Arr = typeof Uint8Array !== 'undefined' ? Uint8Array : Array
 
-  var PLUS = '+'.charCodeAt(0)
-  var SLASH = '/'.charCodeAt(0)
-  var NUMBER = '0'.charCodeAt(0)
-  var LOWER = 'a'.charCodeAt(0)
-  var UPPER = 'A'.charCodeAt(0)
-  var PLUS_URL_SAFE = '-'.charCodeAt(0)
-  var SLASH_URL_SAFE = '_'.charCodeAt(0)
-
-  function decode (elt) {
-    var code = elt.charCodeAt(0)
-    if (code === PLUS || code === PLUS_URL_SAFE) return 62 // '+'
-    if (code === SLASH || code === SLASH_URL_SAFE) return 63 // '/'
-    if (code < NUMBER) return -1 // no match
-    if (code < NUMBER + 10) return code - NUMBER + 26 + 26
-    if (code < UPPER + 26) return code - UPPER
-    if (code < LOWER + 26) return code - LOWER + 26
+function init () {
+  var code = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
+  for (var i = 0, len = code.length; i < len; ++i) {
+    lookup[i] = code[i]
+    revLookup[code.charCodeAt(i)] = i
   }
 
-  function b64ToByteArray (b64) {
-    var i, j, l, tmp, placeHolders, arr
+  revLookup['-'.charCodeAt(0)] = 62
+  revLookup['_'.charCodeAt(0)] = 63
+}
 
-    if (b64.length % 4 > 0) {
-      throw new Error('Invalid string. Length must be a multiple of 4')
-    }
+init()
 
-    // the number of equal signs (place holders)
-    // if there are two placeholders, than the two characters before it
-    // represent one byte
-    // if there is only one, then the three characters before it represent 2 bytes
-    // this is just a cheap hack to not do indexOf twice
-    var len = b64.length
-    placeHolders = b64.charAt(len - 2) === '=' ? 2 : b64.charAt(len - 1) === '=' ? 1 : 0
+function toByteArray (b64) {
+  var i, j, l, tmp, placeHolders, arr
+  var len = b64.length
 
-    // base64 is 4/3 + up to two characters of the original data
-    arr = new Arr(b64.length * 3 / 4 - placeHolders)
-
-    // if there are placeholders, only get up to the last complete 4 chars
-    l = placeHolders > 0 ? b64.length - 4 : b64.length
-
-    var L = 0
-
-    function push (v) {
-      arr[L++] = v
-    }
-
-    for (i = 0, j = 0; i < l; i += 4, j += 3) {
-      tmp = (decode(b64.charAt(i)) << 18) | (decode(b64.charAt(i + 1)) << 12) | (decode(b64.charAt(i + 2)) << 6) | decode(b64.charAt(i + 3))
-      push((tmp & 0xFF0000) >> 16)
-      push((tmp & 0xFF00) >> 8)
-      push(tmp & 0xFF)
-    }
-
-    if (placeHolders === 2) {
-      tmp = (decode(b64.charAt(i)) << 2) | (decode(b64.charAt(i + 1)) >> 4)
-      push(tmp & 0xFF)
-    } else if (placeHolders === 1) {
-      tmp = (decode(b64.charAt(i)) << 10) | (decode(b64.charAt(i + 1)) << 4) | (decode(b64.charAt(i + 2)) >> 2)
-      push((tmp >> 8) & 0xFF)
-      push(tmp & 0xFF)
-    }
-
-    return arr
+  if (len % 4 > 0) {
+    throw new Error('Invalid string. Length must be a multiple of 4')
   }
 
-  function uint8ToBase64 (uint8) {
-    var i
-    var extraBytes = uint8.length % 3 // if we have 1 byte left, pad 2 bytes
-    var output = ''
-    var temp, length
+  // the number of equal signs (place holders)
+  // if there are two placeholders, than the two characters before it
+  // represent one byte
+  // if there is only one, then the three characters before it represent 2 bytes
+  // this is just a cheap hack to not do indexOf twice
+  placeHolders = b64[len - 2] === '=' ? 2 : b64[len - 1] === '=' ? 1 : 0
 
-    function encode (num) {
-      return lookup.charAt(num)
-    }
+  // base64 is 4/3 + up to two characters of the original data
+  arr = new Arr(len * 3 / 4 - placeHolders)
 
-    function tripletToBase64 (num) {
-      return encode(num >> 18 & 0x3F) + encode(num >> 12 & 0x3F) + encode(num >> 6 & 0x3F) + encode(num & 0x3F)
-    }
+  // if there are placeholders, only get up to the last complete 4 chars
+  l = placeHolders > 0 ? len - 4 : len
 
-    // go through the array every three bytes, we'll deal with trailing stuff later
-    for (i = 0, length = uint8.length - extraBytes; i < length; i += 3) {
-      temp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
-      output += tripletToBase64(temp)
-    }
+  var L = 0
 
-    // pad the end with zeros, but make sure to not forget the extra bytes
-    switch (extraBytes) {
-      case 1:
-        temp = uint8[uint8.length - 1]
-        output += encode(temp >> 2)
-        output += encode((temp << 4) & 0x3F)
-        output += '=='
-        break
-      case 2:
-        temp = (uint8[uint8.length - 2] << 8) + (uint8[uint8.length - 1])
-        output += encode(temp >> 10)
-        output += encode((temp >> 4) & 0x3F)
-        output += encode((temp << 2) & 0x3F)
-        output += '='
-        break
-      default:
-        break
-    }
-
-    return output
+  for (i = 0, j = 0; i < l; i += 4, j += 3) {
+    tmp = (revLookup[b64.charCodeAt(i)] << 18) | (revLookup[b64.charCodeAt(i + 1)] << 12) | (revLookup[b64.charCodeAt(i + 2)] << 6) | revLookup[b64.charCodeAt(i + 3)]
+    arr[L++] = (tmp >> 16) & 0xFF
+    arr[L++] = (tmp >> 8) & 0xFF
+    arr[L++] = tmp & 0xFF
   }
 
-  exports.toByteArray = b64ToByteArray
-  exports.fromByteArray = uint8ToBase64
-}(typeof exports === 'undefined' ? (this.base64js = {}) : exports))
+  if (placeHolders === 2) {
+    tmp = (revLookup[b64.charCodeAt(i)] << 2) | (revLookup[b64.charCodeAt(i + 1)] >> 4)
+    arr[L++] = tmp & 0xFF
+  } else if (placeHolders === 1) {
+    tmp = (revLookup[b64.charCodeAt(i)] << 10) | (revLookup[b64.charCodeAt(i + 1)] << 4) | (revLookup[b64.charCodeAt(i + 2)] >> 2)
+    arr[L++] = (tmp >> 8) & 0xFF
+    arr[L++] = tmp & 0xFF
+  }
+
+  return arr
+}
+
+function tripletToBase64 (num) {
+  return lookup[num >> 18 & 0x3F] + lookup[num >> 12 & 0x3F] + lookup[num >> 6 & 0x3F] + lookup[num & 0x3F]
+}
+
+function encodeChunk (uint8, start, end) {
+  var tmp
+  var output = []
+  for (var i = start; i < end; i += 3) {
+    tmp = (uint8[i] << 16) + (uint8[i + 1] << 8) + (uint8[i + 2])
+    output.push(tripletToBase64(tmp))
+  }
+  return output.join('')
+}
+
+function fromByteArray (uint8) {
+  var tmp
+  var len = uint8.length
+  var extraBytes = len % 3 // if we have 1 byte left, pad 2 bytes
+  var output = ''
+  var parts = []
+  var maxChunkLength = 16383 // must be multiple of 3
+
+  // go through the array every three bytes, we'll deal with trailing stuff later
+  for (var i = 0, len2 = len - extraBytes; i < len2; i += maxChunkLength) {
+    parts.push(encodeChunk(uint8, i, (i + maxChunkLength) > len2 ? len2 : (i + maxChunkLength)))
+  }
+
+  // pad the end with zeros, but make sure to not forget the extra bytes
+  if (extraBytes === 1) {
+    tmp = uint8[len - 1]
+    output += lookup[tmp >> 2]
+    output += lookup[(tmp << 4) & 0x3F]
+    output += '=='
+  } else if (extraBytes === 2) {
+    tmp = (uint8[len - 2] << 8) + (uint8[len - 1])
+    output += lookup[tmp >> 10]
+    output += lookup[(tmp >> 4) & 0x3F]
+    output += lookup[(tmp << 2) & 0x3F]
+    output += '='
+  }
+
+  parts.push(output)
+
+  return parts.join('')
+}
 
 },{}],6:[function(require,module,exports){
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
@@ -2598,17 +2846,18 @@ module.exports = ohm.makeRecipe(function() {
 var ohm = require('..');
 module.exports = ohm.makeRecipe(function() {
   var decl = this.newGrammar("OperationsAndAttributes")
-    .withSource("OperationsAndAttributes {\n\n  NameNoFormals =\n    name\n\n  NameAndFormals =\n    name Formals?\n\n  Formals\n    = \"(\" ListOf<name, \",\"> \")\"\n\n  name  (a name)\n    = nameFirst nameRest*\n\n  nameFirst\n    = \"_\"\n    | letter\n\n  nameRest\n    = \"_\"\n    | alnum\n\n}")
-    .withDefaultStartRule("NameNoFormals")
+    .withSource("OperationsAndAttributes {\n\n  AttributeSignature =\n    name\n\n  OperationSignature =\n    name Formals?\n\n  Formals\n    = \"(\" ListOf<name, \",\"> \")\"\n\n  name  (a name)\n    = nameFirst nameRest*\n\n  nameFirst\n    = \"_\"\n    | letter\n\n  nameRest\n    = \"_\"\n    | alnum\n\n}")
+    .withDefaultStartRule("AttributeSignature")
   return decl
-    .define("NameNoFormals", [], this.app("name").withInterval(decl.sourceInterval(49, 53)))
-    .define("NameAndFormals", [], this.seq(this.app("name").withInterval(decl.sourceInterval(78, 82)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(83, 90))).withInterval(decl.sourceInterval(83, 91))).withInterval(decl.sourceInterval(78, 91)))
-    .define("Formals", [], this.seq(this.prim("(").withInterval(decl.sourceInterval(109, 112)), this.app("ListOf", [this.app("name").withInterval(decl.sourceInterval(120, 124)), this.prim(",").withInterval(decl.sourceInterval(126, 129))]).withInterval(decl.sourceInterval(113, 130)), this.prim(")").withInterval(decl.sourceInterval(131, 134))).withInterval(decl.sourceInterval(109, 134)))
-    .define("name", [], this.seq(this.app("nameFirst").withInterval(decl.sourceInterval(159, 168)), this.star(this.app("nameRest").withInterval(decl.sourceInterval(169, 177))).withInterval(decl.sourceInterval(169, 178))).withInterval(decl.sourceInterval(159, 178)), "a name")
-    .define("nameFirst", [], this.alt(this.prim("_").withInterval(decl.sourceInterval(198, 201)), this.app("letter").withInterval(decl.sourceInterval(208, 214))).withInterval(decl.sourceInterval(198, 214)))
-    .define("nameRest", [], this.alt(this.prim("_").withInterval(decl.sourceInterval(233, 236)), this.app("alnum").withInterval(decl.sourceInterval(243, 248))).withInterval(decl.sourceInterval(233, 248)))
+    .define("AttributeSignature", [], this.app("name").withInterval(decl.sourceInterval(54, 58)))
+    .define("OperationSignature", [], this.seq(this.app("name").withInterval(decl.sourceInterval(87, 91)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(92, 99))).withInterval(decl.sourceInterval(92, 100))).withInterval(decl.sourceInterval(87, 100)))
+    .define("Formals", [], this.seq(this.prim("(").withInterval(decl.sourceInterval(118, 121)), this.app("ListOf", [this.app("name").withInterval(decl.sourceInterval(129, 133)), this.prim(",").withInterval(decl.sourceInterval(135, 138))]).withInterval(decl.sourceInterval(122, 139)), this.prim(")").withInterval(decl.sourceInterval(140, 143))).withInterval(decl.sourceInterval(118, 143)))
+    .define("name", [], this.seq(this.app("nameFirst").withInterval(decl.sourceInterval(168, 177)), this.star(this.app("nameRest").withInterval(decl.sourceInterval(178, 186))).withInterval(decl.sourceInterval(178, 187))).withInterval(decl.sourceInterval(168, 187)), "a name")
+    .define("nameFirst", [], this.alt(this.prim("_").withInterval(decl.sourceInterval(207, 210)), this.app("letter").withInterval(decl.sourceInterval(217, 223))).withInterval(decl.sourceInterval(207, 223)))
+    .define("nameRest", [], this.alt(this.prim("_").withInterval(decl.sourceInterval(242, 245)), this.app("alnum").withInterval(decl.sourceInterval(252, 257))).withInterval(decl.sourceInterval(242, 257)))
     .build();
 });
+
 
 },{"..":50}],13:[function(require,module,exports){
 'use strict';
@@ -2635,6 +2884,10 @@ var extend = require('util-extend');
 // --------------------------------------------------------------------
 
 var defaultOperation = {
+  _terminal: function() {
+    return this.primitiveValue;
+  },
+
   _nonterminal: function(children) {
     var ctorName = this._node.ctorName;
     var mapping = this.args.mapping;
@@ -2758,7 +3011,7 @@ module.exports = {
   semantics: semanticsForToAST
 };
 
-},{"../src/Grammar":38,"../src/MatchResult":42,"../src/pexprs":67,"util-extend":35}],15:[function(require,module,exports){
+},{"../src/Grammar":38,"../src/MatchResult":42,"../src/pexprs":69,"util-extend":35}],15:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./is-implemented')() ? Symbol : require('./polyfill');
@@ -3261,7 +3514,7 @@ Builder.prototype = {
 
 module.exports = Builder;
 
-},{"./GrammarDecl":39,"./pexprs":67}],37:[function(require,module,exports){
+},{"./GrammarDecl":39,"./pexprs":69}],37:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -3402,7 +3655,7 @@ var ohmGrammar;
 var buildGrammar;
 
 // This method is called from main.js once Ohm has loaded.
-Grammar.initStartRuleParser = function(grammar, builderFn) {
+Grammar.initApplicationParser = function(grammar, builderFn) {
   ohmGrammar = grammar;
   buildGrammar = builderFn;
 };
@@ -3424,8 +3677,8 @@ Grammar.prototype = {
   // Try to match `ctorArgs` with the body of the rule given by `ruleName`.
   // Return the resulting CST node if it succeeds, otherwise return null.
   _constructByMatching: function(ruleName, ctorArgs) {
-    var state = this._match(ctorArgs, ruleName, {matchNodes: true});
-    if (state.bindings.length === 1) {
+    var state = this._match(ctorArgs, {startApplication: ruleName, matchNodes: true});
+    if (state.bindings.length > 0) {
       return state.bindings[0];
     }
     return null;
@@ -3455,46 +3708,25 @@ Grammar.prototype = {
     return this === Grammar.ProtoBuiltInRules || this === Grammar.BuiltInRules;
   },
 
-  match: function(obj, optStartApplication) {
-    var startApplication = optStartApplication || this.defaultStartRule;
-    if (!startApplication) {
-      throw new Error('Missing start rule argument -- the grammar has no default start rule.');
-    }
-    var state = this._match([obj], startApplication, {});
-    return MatchResult.newFor(state);
-  },
-
-  _match: function(values, startApplication, opts) {
-    var expr;
-    if (startApplication.indexOf('<') === -1) { // do not run in circles
-      // simple application
-      expr = new pexprs.Apply(startApplication);
-    } else {
-      // parameterized application
-      var cst = ohmGrammar.match(startApplication, 'Base_application');
-      expr = buildGrammar(cst, {});
-    }
-
-    var startRule = expr.ruleName;
-    if (!(startRule in this.ruleBodies)) {
-      throw errors.undeclaredRule(startRule, this.name);
-    } else if (this.ruleFormals[startRule].length !== expr.args.length) {
-      throw errors.wrongNumberOfParameters(startRule,
-        this.ruleFormals[startRule].length, expr.args.length);
-    }
-    var state = new State(this, expr.newInputStreamFor(values, this), startRule, opts);
-    state.eval(expr);
+  _match: function(values, opts) {
+    var state = new State(this, values, opts);
+    state.evalFromStart();
     return state;
   },
 
-  trace: function(obj, optStartRule) {
-    var startRule = optStartRule || this.defaultStartRule;
-    if (!startRule) {
-      throw new Error('Missing start rule argument -- the grammar has no default start rule.');
-    }
-    var state = this._match([obj], startRule, {trace: true});
+  match: function(obj, optStartApplication) {
+    var state = this._match([obj], {startApplication: optStartApplication});
+    return MatchResult.newFor(state);
+  },
 
-    var rootTrace = state.trace[0];
+  trace: function(obj, optStartApplication) {
+    var state = this._match([obj], {startApplication: optStartApplication, trace: true});
+
+    // The trace node for the start rule is always the last entry. If it is a syntactic rule,
+    // the first entry is for an application of 'spaces'.
+    // TODO(pdubroy): Clean this up by introducing a special `Match<startAppl>` rule, which will
+    // ensure that there is always a single root trace node.
+    var rootTrace = state.trace[state.trace.length - 1];
     rootTrace.state = state;
     rootTrace.result = MatchResult.newFor(state);
     return rootTrace;
@@ -3658,6 +3890,29 @@ Grammar.prototype = {
     sb.append(common.repeat('_', arity).join(', '));
     sb.append(') {\n');
     sb.append('  }');
+  },
+
+  // Parse a string which expresses a rule application in this grammar, and return the
+  // resulting Apply node.
+  parseApplication: function(str) {
+    var app;
+    if (str.indexOf('<') === -1) {
+      // simple application
+      app = new pexprs.Apply(str);
+    } else {
+      // parameterized application
+      var cst = ohmGrammar.match(str, 'Base_application');
+      app = buildGrammar(cst, {});
+    }
+
+    // Ensure that the application is valid.
+    if (!(app.ruleName in this.ruleBodies)) {
+      throw errors.undeclaredRule(app.ruleName, this.name);
+    } else if (this.ruleFormals[app.ruleName].length !== app.args.length) {
+      throw errors.wrongNumberOfParameters(
+          app.ruleName, this.ruleFormals[app.ruleName].length, app.args.length);
+    }
+    return app;
   }
 };
 
@@ -3672,9 +3927,10 @@ Grammar.ProtoBuiltInRules = new Grammar(
 
     // rule bodies
     {
+      // The following rules can't be written in userland because they reference
+      // `any` and `end` directly.
       any: pexprs.any,
       end: pexprs.end,
-      lower: new pexprs.UnicodeChar('Ll'),
 
       // The following rule is invoked implicitly by syntactic rules to skip spaces.
       spaces: new pexprs.Star(new pexprs.Apply('space')),
@@ -3682,15 +3938,14 @@ Grammar.ProtoBuiltInRules = new Grammar(
       // The `space` rule must be defined here because it's referenced by `spaces`.
       space: new pexprs.Range('\x00', ' '),
 
-      // The union of Lt (titlecase), Lm (modifier), and Lo (other), i.e. any letter not
-      // in Ll or Lu.
-      unicodeLtmo: new pexprs.UnicodeChar('Ltmo'),
-
+      // These rules are implemented natively because they use UnicodeChar directly, which is
+      // not part of the Ohm grammar.
+      lower: new pexprs.UnicodeChar('Ll'),
       upper: new pexprs.UnicodeChar('Lu'),
 
-      Boolean: new pexprs.TypeCheck('boolean'),
-      Number: new pexprs.TypeCheck('number'),
-      String: new pexprs.TypeCheck('string')
+      // The union of Lt (titlecase), Lm (modifier), and Lo (other), i.e. any letter not
+      // in Ll or Lu.
+      unicodeLtmo: new pexprs.UnicodeChar('Ltmo')
     },
 
     // rule formal arguments
@@ -3700,11 +3955,8 @@ Grammar.ProtoBuiltInRules = new Grammar(
       spaces: [],
       space: [],
       lower: [],
-      unicodeLtmo: [],
       upper: [],
-      Boolean: [],
-      Number: [],
-      String: []
+      unicodeLtmo: []
     },
 
     // rule descriptions
@@ -3723,7 +3975,7 @@ Grammar.ProtoBuiltInRules = new Grammar(
 
 module.exports = Grammar;
 
-},{"./MatchResult":42,"./Semantics":45,"./State":46,"./common":48,"./errors":49,"./pexprs":67}],39:[function(require,module,exports){
+},{"./MatchResult":42,"./Semantics":45,"./State":46,"./common":48,"./errors":49,"./pexprs":69}],39:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -3920,7 +4172,7 @@ GrammarDecl.prototype.extend = function(name, formals, fragment) {
 
 module.exports = GrammarDecl;
 
-},{"./Grammar":38,"./InputStream":40,"./common":48,"./errors":49,"./pexprs":67}],40:[function(require,module,exports){
+},{"./Grammar":38,"./InputStream":40,"./common":48,"./errors":49,"./pexprs":69}],40:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -4138,7 +4390,7 @@ Object.defineProperties(Interval.prototype, {
 module.exports = Interval;
 
 
-},{"./common":48,"./errors":49,"./util":68}],42:[function(require,module,exports){
+},{"./common":48,"./errors":49,"./util":70}],42:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -4170,7 +4422,7 @@ function MatchResult(state) {
 }
 
 MatchResult.newFor = function(state) {
-  var succeeded = state.bindings.length === 1;
+  var succeeded = state.bindings.length > 0;
   return succeeded ? new MatchResult(state) : new MatchFailure(state);
 };
 
@@ -4347,7 +4599,7 @@ MatchFailure.prototype.getInterval = function() {
 
 module.exports = MatchResult;
 
-},{"./Interval":41,"./common":48,"./nodes":51,"./util":68,"inherits":33}],43:[function(require,module,exports){
+},{"./Interval":41,"./common":48,"./nodes":51,"./util":70,"inherits":33}],43:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -4516,6 +4768,14 @@ function Wrapper() {}
 
 Wrapper.prototype.toString = function() {
   return '[semantics wrapper for ' + this._node.grammar.name + ']';
+};
+
+Wrapper.prototype._forgetMemoizedResultFor = function(attributeName) {
+  // Remove the memoized attribute from the cstNode and all its children.
+  delete this._node[this._semantics.attributeKeys[attributeName]];
+  this.children.forEach(function(child) {
+    child._forgetMemoizedResultFor(attributeName);
+  });
 };
 
 // Returns the wrapper of the specified child node. Child wrappers are created lazily and cached in
@@ -4690,16 +4950,16 @@ var prototypeGrammarSemantics;
 // This method is called from main.js once Ohm has loaded.
 Semantics.initPrototypeParser = function(grammar) {
   prototypeGrammarSemantics = grammar.semantics().addOperation('parse', {
-    NameNoFormals: function(n) {
+    AttributeSignature: function(name) {
       return {
-        name: n.parse(),
+        name: name.parse(),
         formals: []
       };
     },
-    NameAndFormals: function(n, fs) {
+    OperationSignature: function(name, optFormals) {
       return {
-        name: n.parse(),
-        formals: fs.parse()[0] || []
+        name: name.parse(),
+        formals: optFormals.parse()[0] || []
       };
     },
     Formals: function(oparen, fs, cparen) {
@@ -4712,21 +4972,21 @@ Semantics.initPrototypeParser = function(grammar) {
   prototypeGrammar = grammar;
 };
 
-function parsePrototype(nameAndFormalArgs, allowFormals) {
+function parseSignature(signature, type) {
   if (!prototypeGrammar) {
     // The Operations and Attributes grammar won't be available while Ohm is loading,
     // but we can get away the following simplification b/c none of the operations
     // that are used while loading take arguments.
-    common.assert(nameAndFormalArgs.indexOf('(') === -1);
+    common.assert(signature.indexOf('(') === -1);
     return {
-      name: nameAndFormalArgs,
+      name: signature,
       formals: []
     };
   }
 
   var r = prototypeGrammar.match(
-      nameAndFormalArgs,
-      allowFormals ? 'NameAndFormals' : 'NameNoFormals');
+      signature,
+      type === 'operation' ? 'OperationSignature' : 'AttributeSignature');
   if (r.failed()) {
     throw new Error(r.message);
   }
@@ -4734,10 +4994,10 @@ function parsePrototype(nameAndFormalArgs, allowFormals) {
   return prototypeGrammarSemantics(r).parse();
 }
 
-Semantics.prototype.addOperationOrAttribute = function(type, nameAndFormalArgs, actionDict) {
+Semantics.prototype.addOperationOrAttribute = function(type, signature, actionDict) {
   var typePlural = type + 's';
 
-  var parsedNameAndFormalArgs = parsePrototype(nameAndFormalArgs, type === 'operation');
+  var parsedNameAndFormalArgs = parseSignature(signature, type);
   var name = parsedNameAndFormalArgs.name;
   var formals = parsedNameAndFormalArgs.formals;
 
@@ -4759,12 +5019,6 @@ Semantics.prototype.addOperationOrAttribute = function(type, nameAndFormalArgs, 
         // This CST node corresponds to an iteration expression in the grammar (*, +, or ?). The
         // default behavior is to map this operation or attribute over all of its child nodes.
         return children.map(function(child) { return doIt.apply(child, args); });
-      }
-
-      if (this.isTerminal()) {
-        // This CST node corresponds to a terminal expression in the grammar (e.g., "+"). The
-        // default behavior is to return that terminal's primitive value.
-        return this.primitiveValue;
       }
 
       // This CST node corresponds to a non-terminal in the grammar (e.g., AddExpr). The fact that
@@ -4840,7 +5094,7 @@ Semantics.prototype.extendOperationOrAttribute = function(type, name, actionDict
   var typePlural = type + 's';
 
   // Make sure that `name` really is just a name, i.e., that it doesn't also contain formals.
-  parsePrototype(name, false);
+  parseSignature(name, 'attribute');
 
   if (!(this.super && name in this.super[typePlural])) {
     throw new Error('Cannot extend ' + type + " '" + name +
@@ -4923,8 +5177,8 @@ Semantics.createSemantics = function(grammar, optSuperSemantics) {
   };
 
   // Forward public methods from the proxy to the semantics instance.
-  proxy.addOperation = function(nameAndFormalArgs, actionDict) {
-    s.addOperationOrAttribute.call(s, 'operation', nameAndFormalArgs, actionDict);
+  proxy.addOperation = function(signature, actionDict) {
+    s.addOperationOrAttribute.call(s, 'operation', signature, actionDict);
     return proxy;
   };
   proxy.extendOperation = function(name, actionDict) {
@@ -4938,6 +5192,14 @@ Semantics.createSemantics = function(grammar, optSuperSemantics) {
   proxy.extendAttribute = function(name, actionDict) {
     s.extendOperationOrAttribute.call(s, 'attribute', name, actionDict);
     return proxy;
+  };
+  proxy._getActionDict = function(operationOrAttributeName) {
+    var action = s.operations[operationOrAttributeName] || s.attributes[operationOrAttributeName];
+    if (!action) {
+      throw new Error('"' + operationOrAttributeName + '" is not a valid operation or attribute ' +
+        'name in this semantics for "' + grammar.name + '"');
+    }
+    return action.actionDict;
   };
 
   // Make the proxy's toString() work.
@@ -5065,6 +5327,7 @@ module.exports = Semantics;
 var PosInfo = require('./PosInfo');
 var Trace = require('./Trace');
 var pexprs = require('./pexprs');
+
 // --------------------------------------------------------------------
 // Private stuff
 // --------------------------------------------------------------------
@@ -5074,10 +5337,10 @@ var RM_RIGHTMOST_FAILURES = 1;
 
 var applySpaces = new pexprs.Apply('spaces');
 
-function State(grammar, inputStream, startRule, opts) {
+function State(grammar, input, opts) {
   this.grammar = grammar;
-  this.origInputStream = inputStream;
-  this.startRule = startRule;
+  this.startExpr = this._getStartExpr(grammar, opts.startApplication);
+  this.origInputStream = this.startExpr.newInputStreamFor(input, this.grammar);
   this.tracingEnabled = opts.trace || false;
   this.matchNodes = opts.matchNodes || false;
   this.init(RM_RIGHTMOST_FAILURE_POSITION);
@@ -5134,16 +5397,17 @@ State.prototype = {
     return this.applicationStack[this.applicationStack.length - 1];
   },
 
-  inSyntacticRule: function() {
+  inSyntacticContext: function() {
     if (typeof this.inputStream.source !== 'string') {
       return false;
     }
     var currentApplication = this.currentApplication();
-    return currentApplication && currentApplication.isSyntactic();
-  },
-
-  inSyntacticContext: function() {
-    return this.inSyntacticRule() && !this.inLexifiedContext();
+    if (currentApplication) {
+      return currentApplication.isSyntactic() && !this.inLexifiedContext();
+    } else {
+      // The top-level context is syntactic if the start application is.
+      return this.startExpr.factors[0].isSyntactic();
+    }
   },
 
   inLexifiedContext: function() {
@@ -5162,6 +5426,16 @@ State.prototype = {
     return this.inSyntacticContext() ?
         this.skipSpaces() :
         this.inputStream.pos;
+  },
+
+  maybeSkipSpacesBefore: function(expr) {
+    if (expr instanceof pexprs.Apply && expr.isSyntactic()) {
+      return this.skipSpaces();
+    } else if (expr.allowsSkippingPrecedingSpace() && expr !== applySpaces) {
+      return this.skipSpacesIfInSyntacticContext();
+    } else {
+      return this.inputStream.pos;
+    }
   },
 
   truncateBindings: function(newLength) {
@@ -5250,7 +5524,7 @@ State.prototype = {
     if (this.recordingMode === RM_RIGHTMOST_FAILURE_POSITION) {
       // Rewind, then try to match the input again, recording failures.
       this.init(RM_RIGHTMOST_FAILURES);
-      this.eval(new pexprs.Apply(this.startRule));
+      this.evalFromStart();
     }
 
     this.ensureRightmostFailures();
@@ -5273,10 +5547,10 @@ State.prototype = {
   },
 
   // Returns a new trace entry, with the currently active trace array as its children.
-  getTraceEntry: function(pos, expr, cstNode) {
+  getTraceEntry: function(pos, expr, succeeded, bindings) {
     var memoEntry = this.getMemoizedTraceEntry(pos, expr);
     return memoEntry ? memoEntry.cloneWithExpr(expr)
-                     : new Trace(this.inputStream, pos, expr, cstNode, this.trace);
+                     : new Trace(this.inputStream, pos, expr, succeeded, bindings, this.trace);
   },
 
   isTracing: function() {
@@ -5305,13 +5579,15 @@ State.prototype = {
   // have increased. On failure, `bindings` and position will be unchanged.
   eval: function(expr) {
     var inputStream = this.inputStream;
-    var origPos = inputStream.pos;
     var origNumBindings = this.bindings.length;
 
     if (this.recordingMode === RM_RIGHTMOST_FAILURES) {
       var origFailures = this.rightmostFailures;
       this.rightmostFailures = undefined;
     }
+
+    var origPos = inputStream.pos;
+    var memoPos = this.maybeSkipSpacesBefore(expr);
 
     if (this.isTracing()) {
       var origTrace = this.trace;
@@ -5322,8 +5598,10 @@ State.prototype = {
     var ans = expr.eval(this);
 
     if (this.isTracing()) {
-      var cstNode = ans ? this.bindings[this.bindings.length - 1] : null;
-      var traceEntry = this.getTraceEntry(origPos, expr, cstNode);
+      var bindings = this.bindings.slice(origNumBindings);
+      var traceEntry = this.getTraceEntry(memoPos, expr, ans, bindings);
+      traceEntry.isImplicitSpaces = expr === applySpaces;
+      traceEntry.isRootNode = expr === this.startExpr;
       origTrace.push(traceEntry);
       this.trace = origTrace;
     }
@@ -5350,6 +5628,23 @@ State.prototype = {
     return ans;
   },
 
+  // Return the starting expression for this grammar. If `optStartApplication` is specified, it
+  // is a string expressing a rule application in the grammar. If not specified, the grammar's
+  // default start rule will be used.
+  _getStartExpr: function(grammar, optStartApplication) {
+    var applicationStr = optStartApplication || grammar.defaultStartRule;
+    if (!applicationStr) {
+      throw new Error('Missing start rule argument -- the grammar has no default start rule.');
+    }
+
+    var startApp = grammar.parseApplication(applicationStr);
+    return new pexprs.Seq([startApp, pexprs.end]);
+  },
+
+  evalFromStart: function() {
+    this.eval(this.startExpr);
+  },
+
   getFailuresInfo: function() {
     if (this.recordingMode === RM_RIGHTMOST_FAILURE_POSITION) {
       return this.rightmostFailurePosition;
@@ -5364,9 +5659,7 @@ State.prototype = {
     } else /* if (this.recordingMode === RM_RIGHTMOST_FAILURES) */ {
       this.rightmostFailures = failuresInfo;
     }
-  },
-
-  applySpaces: applySpaces
+  }
 };
 
 // --------------------------------------------------------------------
@@ -5375,7 +5668,7 @@ State.prototype = {
 
 module.exports = State;
 
-},{"./PosInfo":44,"./Trace":47,"./pexprs":67}],47:[function(require,module,exports){
+},{"./PosInfo":44,"./Trace":47,"./pexprs":69}],47:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -5397,17 +5690,6 @@ var RIGHTWARDS_DOUBLE_ARROW = '\u21D2';
 var SYMBOL_FOR_HORIZONTAL_TABULATION = '\u2409';
 var SYMBOL_FOR_LINE_FEED = '\u240A';
 var SYMBOL_FOR_CARRIAGE_RETURN = '\u240D';
-
-function linkLeftRecursiveChildren(children) {
-  for (var i = 0; i < children.length; ++i) {
-    var child = children[i];
-    var nextChild = children[i + 1];
-
-    if (nextChild && child.expr === nextChild.expr) {
-      child.replacedBy = nextChild;
-    }
-  }
-}
 
 function spaces(n) {
   return common.repeat(' ', n).join('');
@@ -5439,17 +5721,19 @@ function asEscapedString(obj) {
 
 // ----------------- Trace -----------------
 
-function Trace(inputStream, pos, expr, cstNode, optChildren) {
-  this.children = optChildren || [];
-  this.expr = expr;
-  if (cstNode) {
-    this.interval = new Interval(inputStream, pos, inputStream.pos);
-    this.cstNode = cstNode;
-  }
-  this.isLeftRecursive = false;
-  this.pos = pos;
+function Trace(inputStream, pos, expr, succeeded, bindings, optChildren) {
   this.inputStream = inputStream;
-  this.succeeded = !!cstNode;
+  this.pos = pos;
+  this.interval = new Interval(inputStream, pos, inputStream.pos);
+  this.expr = expr;
+  this.succeeded = succeeded;
+  this.bindings = bindings;
+  this.children = optChildren || [];
+
+  this.isImplicitSpaces = false;
+  this.isLeftRecursive = false;
+  this.isMemoized = false;
+  this.isRootNode = false;
 }
 
 // A value that can be returned from visitor functions to indicate that a
@@ -5461,19 +5745,12 @@ Object.defineProperty(Trace.prototype, 'displayString', {
 });
 
 Trace.prototype.cloneWithExpr = function(expr) {
-  var ans = new Trace(this.inputStream, this.pos, expr, this.cstNode, this.children);
+  var ans = new Trace(
+      this.inputStream, this.pos, expr, this.succeeded, this.bindings, this.children);
   ans.isLeftRecursive = this.isLeftRecursive;
+  ans.isRootNode = this.isRootNode;
   ans.isMemoized = true;
   return ans;
-};
-
-// Set the value of `isLeftRecursive` for this node.
-// If true, each child of this node represents one iteration of the "growing the seed" loop.
-Trace.prototype.setLeftRecursive = function(leftRecursive) {
-  this.isLeftRecursive = leftRecursive;
-  if (leftRecursive) {
-    linkLeftRecursiveChildren(this.children);
-  }
 };
 
 // Recursively traverse this trace node and all its descendents, calling a visitor function
@@ -5490,7 +5767,8 @@ Trace.prototype.walk = function(visitorObjOrFn, optThisArg) {
   if (typeof visitor === 'function') {
     visitor = {enter: visitor};
   }
-  return (function _walk(node, parent, depth) {
+
+  function _walk(node, parent, depth) {
     var recurse = true;
     if (visitor.enter) {
       if (visitor.enter.call(optThisArg, node, parent, depth) === Trace.prototype.SKIP) {
@@ -5498,16 +5776,26 @@ Trace.prototype.walk = function(visitorObjOrFn, optThisArg) {
       }
     }
     if (recurse) {
-      node.children.forEach(function(c) {
-        if (c && ('walk' in c)) {
-          _walk(c, node, depth + 1);
+      node.children.forEach(function(child, i) {
+        var nextChild = node.children[i + 1];
+        if (nextChild && nextChild.expr === child.expr && nextChild.pos === child.pos) {
+          // Skip this child -- it is an intermediate left-recursive result.
+          common.assert(node.isLeftRecursive);
+        } else {
+          _walk(child, node, depth + 1);
         }
       });
       if (visitor.exit) {
         visitor.exit.call(optThisArg, node, parent, depth);
       }
     }
-  })(this, null, 0);
+  }
+  if (this.isRootNode) {
+    // Don't visit the root node itself, only its children.
+    this.children.forEach(function(c) { _walk(c, null, 0); });
+  } else {
+    _walk(this, null, 0);
+  }
 };
 
 // Return a string representation of the trace.
@@ -5518,9 +5806,13 @@ Trace.prototype.walk = function(visitorObjOrFn, optThisArg) {
 Trace.prototype.toString = function() {
   var sb = new common.StringBuffer();
   this.walk(function(node, parent, depth) {
+    if (!node) {
+      return this.SKIP;
+    }
     var ctorName = node.expr.constructor.name;
+    // Don't print anything for Alt nodes.
     if (ctorName === 'Alt') {
-      return;  // Don't print anything for Alt nodes.
+      return;  // eslint-disable-line consistent-return
     }
     sb.append(getInputExcerpt(node.inputStream, node.pos, 10) + spaces(depth * 2 + 1));
     sb.append((node.succeeded ? CHECK_MARK : BALLOT_X) + ' ' + node.displayString);
@@ -5533,7 +5825,7 @@ Trace.prototype.toString = function() {
       sb.append(typeof contents === 'string' ? '"' + contents + '"' : contents);
     }
     sb.append('\n');
-  });
+  }.bind(this));
   return sb.contents();
 };
 
@@ -5637,6 +5929,16 @@ exports.getDuplicates = function(array) {
     }
   }
   return duplicates;
+};
+
+exports.copyWithoutDuplicates = function(array) {
+  var noDuplicates = [];
+  array.forEach(function(entry) {
+    if (noDuplicates.indexOf(entry) < 0) {
+      noDuplicates.push(entry);
+    }
+  });
+  return noDuplicates;
 };
 
 exports.fail = {};
@@ -6219,6 +6521,10 @@ function buildGrammar(match, namespace, optOhmGrammarForTesting) {
     },
     EmptyListOf: function() {
       return [];
+    },
+
+    _terminal: function() {
+      return this.primitiveValue;
     }
   });
   return helpers(match).visit();
@@ -6345,9 +6651,9 @@ Semantics.initBuiltInSemantics(Grammar.BuiltInRules);
 Semantics.initPrototypeParser(operationsAndAttributesGrammar);  // requires BuiltInSemantics
 
 module.exports.ohmGrammar = ohmGrammar = require('../dist/ohm-grammar');
-Grammar.initStartRuleParser(ohmGrammar, buildGrammar);
+Grammar.initApplicationParser(ohmGrammar, buildGrammar);
 
-},{"../dist/built-in-rules":10,"../dist/ohm-grammar":11,"../dist/operations-and-attributes":12,"../extras":13,"./Builder":36,"./Grammar":38,"./Namespace":43,"./Semantics":45,"./common":48,"./errors":49,"./pexprs":67,"./util":68,"is-buffer":34}],51:[function(require,module,exports){
+},{"../dist/built-in-rules":10,"../dist/ohm-grammar":11,"../dist/operations-and-attributes":12,"../extras":13,"./Builder":36,"./Grammar":38,"./Namespace":43,"./Semantics":45,"./common":48,"./errors":49,"./pexprs":69,"./util":70,"is-buffer":34}],51:[function(require,module,exports){
 'use strict';
 
 var inherits = require('inherits');
@@ -6523,6 +6829,55 @@ module.exports = {
 // --------------------------------------------------------------------
 
 var common = require('./common');
+var pexprs = require('./pexprs');
+
+// --------------------------------------------------------------------
+// Operations
+// --------------------------------------------------------------------
+
+/*
+  Return true if we should skip spaces preceding this expression in a syntactic context.
+*/
+pexprs.PExpr.prototype.allowsSkippingPrecedingSpace = common.abstract;
+
+/*
+  Generally, these are all first-order expressions that operate on strings and (with the
+  exception of Apply) directly read from the input stream.
+*/
+pexprs.any.allowsSkippingPrecedingSpace =
+pexprs.end.allowsSkippingPrecedingSpace =
+pexprs.Apply.prototype.allowsSkippingPrecedingSpace =
+pexprs.Prim.prototype.allowsSkippingPrecedingSpace =
+pexprs.Range.prototype.allowsSkippingPrecedingSpace =
+pexprs.UnicodeChar.prototype.allowsSkippingPrecedingSpace = function() {
+  return true;
+};
+
+/*
+  Higher-order expressions that don't directly consume input, and expressions that
+  don't operate on string input streams (e.g. Obj and Arr).
+*/
+pexprs.Alt.prototype.allowsSkippingPrecedingSpace =
+pexprs.Arr.prototype.allowsSkippingPrecedingSpace =
+pexprs.Iter.prototype.allowsSkippingPrecedingSpace =
+pexprs.Lex.prototype.allowsSkippingPrecedingSpace =
+pexprs.Lookahead.prototype.allowsSkippingPrecedingSpace =
+pexprs.Not.prototype.allowsSkippingPrecedingSpace =
+pexprs.Obj.prototype.allowsSkippingPrecedingSpace =
+pexprs.Param.prototype.allowsSkippingPrecedingSpace =
+pexprs.Seq.prototype.allowsSkippingPrecedingSpace =
+pexprs.Value.prototype.allowsSkippingPrecedingSpace = function() {
+  return false;
+};
+
+},{"./common":48,"./pexprs":69}],53:[function(require,module,exports){
+'use strict';
+
+// --------------------------------------------------------------------
+// Imports
+// --------------------------------------------------------------------
+
+var common = require('./common');
 var errors = require('./errors');
 var pexprs = require('./pexprs');
 
@@ -6544,7 +6899,6 @@ pexprs.end._assertAllApplicationsAreValid =
 pexprs.Prim.prototype._assertAllApplicationsAreValid =
 pexprs.Range.prototype._assertAllApplicationsAreValid =
 pexprs.Param.prototype._assertAllApplicationsAreValid =
-pexprs.TypeCheck.prototype._assertAllApplicationsAreValid =
 pexprs.UnicodeChar.prototype._assertAllApplicationsAreValid = function(ruleName, grammar) {
   // no-op
 };
@@ -6611,7 +6965,7 @@ pexprs.Apply.prototype._assertAllApplicationsAreValid = function(ruleName, gramm
   });
 };
 
-},{"./common":48,"./errors":49,"./pexprs":67}],53:[function(require,module,exports){
+},{"./common":48,"./errors":49,"./pexprs":69}],54:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -6634,7 +6988,6 @@ pexprs.Prim.prototype.assertChoicesHaveUniformArity =
 pexprs.Range.prototype.assertChoicesHaveUniformArity =
 pexprs.Param.prototype.assertChoicesHaveUniformArity =
 pexprs.Lex.prototype.assertChoicesHaveUniformArity =
-pexprs.TypeCheck.prototype.assertChoicesHaveUniformArity =
 pexprs.UnicodeChar.prototype.assertChoicesHaveUniformArity = function(ruleName) {
   // no-op
 };
@@ -6695,7 +7048,7 @@ pexprs.Apply.prototype.assertChoicesHaveUniformArity = function(ruleName) {
   // `assertAllApplicationsAreValid()`.
 };
 
-},{"./common":48,"./errors":49,"./pexprs":67}],54:[function(require,module,exports){
+},{"./common":48,"./errors":49,"./pexprs":69}],55:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -6717,7 +7070,6 @@ pexprs.end.assertIteratedExprsAreNotNullable =
 pexprs.Prim.prototype.assertIteratedExprsAreNotNullable =
 pexprs.Range.prototype.assertIteratedExprsAreNotNullable =
 pexprs.Param.prototype.assertIteratedExprsAreNotNullable =
-pexprs.TypeCheck.prototype.assertIteratedExprsAreNotNullable =
 pexprs.UnicodeChar.prototype.assertIteratedExprsAreNotNullable = function(grammar, ruleName) {
   // no-op
 };
@@ -6764,7 +7116,7 @@ pexprs.Apply.prototype.assertIteratedExprsAreNotNullable = function(grammar, rul
   });
 };
 
-},{"./common":48,"./errors":49,"./pexprs":67}],55:[function(require,module,exports){
+},{"./common":48,"./errors":49,"./pexprs":69}],56:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -6785,7 +7137,7 @@ pexprs.PExpr.prototype.assertValuesAndStringsAreNotMixed = function(grammar, rul
   this.getExprType(grammar, memo);
 };
 
-},{"./pexprs":67}],56:[function(require,module,exports){
+},{"./pexprs":69}],57:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -6928,12 +7280,7 @@ pexprs.UnicodeChar.prototype.check = function(grammar, vals) {
          typeof vals[0].primitiveValue === 'string';
 };
 
-pexprs.TypeCheck.prototype.check = function(grammar, vals) {
-  return vals[0] instanceof nodes.Node &&
-         typeof vals[0].primitiveValue === this.type;
-};
-
-},{"./common":48,"./nodes":51,"./pexprs":67}],57:[function(require,module,exports){
+},{"./common":48,"./nodes":51,"./pexprs":69}],58:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -6976,8 +7323,8 @@ var hasOwnProp = Object.prototype.hasOwnProperty;
 pexprs.PExpr.prototype.eval = common.abstract;  // function(state) { ... }
 
 pexprs.any.eval = function(state) {
-  var origPos = state.skipSpacesIfInSyntacticContext();
   var inputStream = state.inputStream;
+  var origPos = inputStream.pos;
   var value = inputStream.next();
   if (value === common.fail) {
     state.processFailure(origPos, this);
@@ -6990,8 +7337,8 @@ pexprs.any.eval = function(state) {
 };
 
 pexprs.end.eval = function(state) {
-  var origPos = state.skipSpacesIfInSyntacticContext();
   var inputStream = state.inputStream;
+  var origPos = inputStream.pos;
   if (inputStream.atEnd()) {
     var interval = inputStream.interval(inputStream.pos);
     state.bindings.push(new TerminalNode(state.grammar, undefined, interval));
@@ -7003,8 +7350,8 @@ pexprs.end.eval = function(state) {
 };
 
 pexprs.Prim.prototype.eval = function(state) {
-  var origPos = state.skipSpacesIfInSyntacticContext();
   var inputStream = state.inputStream;
+  var origPos = inputStream.pos;
   if (this.match(inputStream) === common.fail) {
     state.processFailure(origPos, this);
     return false;
@@ -7023,8 +7370,8 @@ pexprs.Prim.prototype.match = function(inputStream) {
 };
 
 pexprs.Range.prototype.eval = function(state) {
-  var origPos = state.skipSpacesIfInSyntacticContext();
   var inputStream = state.inputStream;
+  var origPos = inputStream.pos;
   var obj = inputStream.next();
   if (typeof obj === typeof this.from && this.from <= obj && obj <= this.to) {
     var interval = inputStream.interval(origPos);
@@ -7208,11 +7555,6 @@ pexprs.Apply.prototype.eval = function(state) {
   var actuals = caller ? caller.args : [];
   var app = this.substituteParams(actuals);
 
-  // Skip whitespace at the application site, if the rule that's being applied is syntactic
-  if (app !== state.applySpaces && (app.isSyntactic() || state.inSyntacticContext())) {
-    state.skipSpaces();
-  }
-
   var posInfo = state.getCurrentPosInfo();
   if (posInfo.isActive(app)) {
     // This rule is already active at this position, i.e., it is left-recursive.
@@ -7223,7 +7565,7 @@ pexprs.Apply.prototype.eval = function(state) {
   var memoRec = posInfo.memo[memoKey];
   return memoRec && posInfo.shouldUseMemoizedResult(memoRec) ?
       state.useMemoizedResult(memoRec) :
-      app.reallyEval(state, !caller);
+      app.reallyEval(state);
 };
 
 pexprs.Apply.prototype.handleCycle = function(state) {
@@ -7238,14 +7580,13 @@ pexprs.Apply.prototype.handleCycle = function(state) {
     memoRec.updateInvolvedApplicationMemoKeys();
   } else if (!memoRec) {
     // New left recursion detected! Memoize a failure to try to get a seed parse.
-    memoRec = posInfo.memo[memoKey] =
-        {pos: -1, value: false};
+    memoRec = posInfo.memo[memoKey] = {pos: -1, value: false};
     posInfo.startLeftRecursion(this, memoRec);
   }
   return state.useMemoizedResult(memoRec);
 };
 
-pexprs.Apply.prototype.reallyEval = function(state, isTopLevelApplication) {
+pexprs.Apply.prototype.reallyEval = function(state) {
   var inputStream = state.inputStream;
   var origPos = inputStream.pos;
   var origPosInfo = state.getCurrentPosInfo();
@@ -7292,8 +7633,9 @@ pexprs.Apply.prototype.reallyEval = function(state, isTopLevelApplication) {
   // Record trace information in the memo table, so that it is available if the memoized result
   // is used later.
   if (state.isTracing() && origPosInfo.memo[memoKey]) {
-    var entry = state.getTraceEntry(origPos, this, value);
-    entry.setLeftRecursive(isHeadOfLeftRecursion);
+    var succeeded = !!value;
+    var entry = state.getTraceEntry(origPos, this, succeeded, succeeded ? [value] : []);
+    entry.isLeftRecursive = isHeadOfLeftRecursion;
     origPosInfo.memo[memoKey].traceEntry = entry;
   }
 
@@ -7301,7 +7643,7 @@ pexprs.Apply.prototype.reallyEval = function(state, isTopLevelApplication) {
 
   if (value) {
     state.bindings.push(value);
-    return !isTopLevelApplication || this.entireInputWasConsumed(state);
+    return true;
   } else {
     return false;
   }
@@ -7348,8 +7690,12 @@ pexprs.Apply.prototype.growSeedResult = function(body, state, origPos, lrMemoRec
     lrMemoRec.failuresAtRightmostPosition = state.cloneRightmostFailures();
 
     if (state.isTracing()) {
-      var children = state.trace[state.trace.length - 1].children.slice();
-      lrMemoRec.traceEntry = new Trace(state.inputStream, origPos, this, newValue, children);
+      // Before evaluating the body again, add a trace node for this application to the memo entry.
+      // Its only child is the trace node from `newValue`, which will always be the last element
+      // in `state.trace`.
+      var children = state.trace.slice(-1);
+      lrMemoRec.traceEntry = new Trace(
+          state.inputStream, origPos, this, true, [newValue], children);
     }
     inputStream.pos = origPos;
     newValue = this.evalOnce(body, state);
@@ -7365,20 +7711,9 @@ pexprs.Apply.prototype.growSeedResult = function(body, state, origPos, lrMemoRec
   return lrMemoRec.value;
 };
 
-pexprs.Apply.prototype.entireInputWasConsumed = function(state) {
-  if (this.isSyntactic()) {
-    state.skipSpaces();
-  }
-  if (!state.eval(pexprs.end)) {
-    return false;
-  }
-  state.bindings.pop();  // discard the binding that was added by `end` in the check above
-  return true;
-};
-
 pexprs.UnicodeChar.prototype.eval = function(state) {
-  var origPos = state.skipSpacesIfInSyntacticContext();
   var inputStream = state.inputStream;
+  var origPos = inputStream.pos;
   var value = inputStream.next();
   if (value === common.fail || !this.pattern.test(value)) {
     state.processFailure(origPos, this);
@@ -7390,21 +7725,7 @@ pexprs.UnicodeChar.prototype.eval = function(state) {
   }
 };
 
-pexprs.TypeCheck.prototype.eval = function(state) {
-  var inputStream = state.inputStream;
-  var origPos = inputStream.pos;
-  var value = inputStream.next();
-  if (typeof value === this.type) {
-    var interval = inputStream.interval(origPos);
-    state.bindings.push(new TerminalNode(state.grammar, value, interval));
-    return true;
-  } else {
-    state.processFailure(origPos, this);
-    return false;
-  }
-};
-
-},{"./InputStream":40,"./Trace":47,"./common":48,"./nodes":51,"./pexprs":67}],58:[function(require,module,exports){
+},{"./InputStream":40,"./Trace":47,"./common":48,"./nodes":51,"./pexprs":69}],59:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7426,7 +7747,6 @@ pexprs.Prim.prototype.getArity =
 pexprs.Range.prototype.getArity =
 pexprs.Param.prototype.getArity =
 pexprs.Apply.prototype.getArity =
-pexprs.TypeCheck.prototype.getArity =
 pexprs.UnicodeChar.prototype.getArity = function() {
   return 1;
 };
@@ -7468,7 +7788,7 @@ pexprs.Obj.prototype.getArity = function() {
   return arity;
 };
 
-},{"./common":48,"./pexprs":67}],59:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],60:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7528,7 +7848,6 @@ pexprs.Range.prototype._calculateExprType = function(grammar, memo) {
 
 pexprs.Arr.prototype._calculateExprType =
 pexprs.Obj.prototype._calculateExprType =
-pexprs.TypeCheck.prototype._calculateExprType =
 pexprs.Value.prototype._calculateExprType = function(grammar, memo) {
   return pexprs.TYPE_VALUE;
 };
@@ -7585,7 +7904,7 @@ pexprs.Apply.prototype._calculateExprType = function(grammar, memo) {
   return memo[key];
 };
 
-},{"./common":48,"./errors":49,"./pexprs":67}],60:[function(require,module,exports){
+},{"./common":48,"./errors":49,"./pexprs":69}],61:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7611,7 +7930,6 @@ pexprs.end.introduceParams =
 pexprs.Prim.prototype.introduceParams =
 pexprs.Range.prototype.introduceParams =
 pexprs.Param.prototype.introduceParams =
-pexprs.TypeCheck.prototype.introduceParams =
 pexprs.UnicodeChar.prototype.introduceParams = function(formals) {
   return this;
 };
@@ -7663,7 +7981,7 @@ pexprs.Apply.prototype.introduceParams = function(formals) {
   }
 };
 
-},{"./common":48,"./pexprs":67}],61:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],62:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7691,7 +8009,6 @@ pexprs.Plus.prototype._isNullable =
 pexprs.Value.prototype._isNullable =
 pexprs.Arr.prototype._isNullable =
 pexprs.Obj.prototype._isNullable =
-pexprs.TypeCheck.prototype._isNullable =
 pexprs.UnicodeChar.prototype._isNullable = function(grammar, memo) {
   return false;
 };
@@ -7741,7 +8058,7 @@ pexprs.Apply.prototype._isNullable = function(grammar, memo) {
   return memo[key];
 };
 
-},{"./common":48,"./pexprs":67}],62:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],63:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7897,7 +8214,7 @@ pexprs.Apply.prototype.outputRecipe = function(sb, formals, grammarInterval) {
   sb.append(')' + getIntervalInfo(this, grammarInterval));
 };
 
-},{"./common":48,"./pexprs":67}],63:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],64:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7917,14 +8234,13 @@ var pexprs = require('./pexprs');
 
   The receiver must not be modified; a new PExpr must be returned if any replacement is necessary.
 */
-pexprs.PExpr.prototype.substituteParams = common.abstract;  // function (actuals) { ... }
+pexprs.PExpr.prototype.substituteParams = common.abstract;  // function(actuals) { ... }
 
 pexprs.any.substituteParams =
 pexprs.end.substituteParams =
 pexprs.Prim.prototype.substituteParams =
 pexprs.Range.prototype.substituteParams =
 pexprs.Prim.prototype.substituteParams =
-pexprs.TypeCheck.prototype.substituteParams =
 pexprs.UnicodeChar.prototype.substituteParams = function(actuals) {
   return this;
 };
@@ -7972,7 +8288,158 @@ pexprs.Apply.prototype.substituteParams = function(actuals) {
   }
 };
 
-},{"./common":48,"./pexprs":67}],64:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],65:[function(require,module,exports){
+'use strict';
+
+// --------------------------------------------------------------------
+// Imports
+// --------------------------------------------------------------------
+
+var common = require('./common');
+var pexprs = require('./pexprs');
+
+var copyWithoutDuplicates = common.copyWithoutDuplicates;
+
+// --------------------------------------------------------------------
+// Operations
+// --------------------------------------------------------------------
+
+/*
+  Returns a list of strings that will be used as the default argument names for its receiver
+  (a pexpr) in a semantic action. This is used exclusively by the Semantics Editor.
+
+  `firstArgIndex` is the 1-based index of the first argument name that will be generated for this
+  pexpr. It enables us to name arguments positionally, e.g., if the second argument is a
+  non-alphanumeric terminal like "+", it will be named '$2'.
+
+  Here is a more elaborate example that illustrates how this method works:
+  `(a "+" b).toArgumentNameList(1)` evaluates to `['a', '$2', 'b']` with the following recursive
+  calls:
+
+    (a).toArgumentNameList(1) -> ['a'],
+    ("+").toArgumentNameList(2) -> ['$2'],
+    (b).toArgumentNameList(3) -> ['b']
+
+  Notes:
+  * This method must only be called on well-formed expressions, e.g., the receiver must
+    not have any Alt sub-expressions with inconsistent arities.
+  * e.getArity() === e.toArgumentNameList(1).length
+*/
+pexprs.PExpr.prototype.toArgumentNameList = common.abstract;  // function(firstArgIndex) { ... }
+
+pexprs.any.toArgumentNameList = function(firstArgIndex) {
+  return ['any'];
+};
+
+pexprs.end.toArgumentNameList = function(firstArgIndex) {
+  return ['end'];
+};
+
+pexprs.Prim.prototype.toArgumentNameList = function(firstArgIndex) {
+  if (typeof this.obj === 'string' && /^[_a-zA-Z0-9]+$/.test(this.obj)) {
+    // If this terminal is a valid suffix for a JS identifier, just prepend it with '_'
+    return ['_' + this.obj];
+  } else {
+    // Otherwise, name it positionally.
+    return ['$' + firstArgIndex];
+  }
+};
+
+pexprs.Range.prototype.toArgumentNameList = function(firstArgIndex) {
+  return [this.from + '_to_' + this.to];
+};
+
+pexprs.Alt.prototype.toArgumentNameList = function(firstArgIndex) {
+  // `termArgNameLists` is an array of arrays where each row is the
+  // argument name list that corresponds to a term in this alternation.
+  var termArgNameLists = this.terms.map(function(term) {
+    return term.toArgumentNameList(firstArgIndex);
+  });
+
+  var argumentNameList = [];
+  var numArgs = termArgNameLists[0].length;
+  for (var colIdx = 0; colIdx < numArgs; colIdx++) {
+    var col = [];
+    for (var rowIdx = 0; rowIdx < this.terms.length; rowIdx++) {
+      col.push(termArgNameLists[rowIdx][colIdx]);
+    }
+    var uniqueNames = copyWithoutDuplicates(col);
+    argumentNameList.push(uniqueNames.join('_or_'));
+  }
+
+  return argumentNameList;
+};
+
+pexprs.Seq.prototype.toArgumentNameList = function(firstArgIndex) {
+  // Generate the argument name list, without worrying about duplicates.
+  var argumentNameList = [];
+  this.factors.forEach(function(factor) {
+    var factorArgumentNameList = factor.toArgumentNameList(firstArgIndex);
+    argumentNameList = argumentNameList.concat(factorArgumentNameList);
+
+    // Shift the firstArgIndex to take this factor's argument names into account.
+    firstArgIndex += factorArgumentNameList.length;
+  });
+
+  // `count` is used to record the number of times each argument name occurs in the list,
+  // this is useful for checking duplicated argument name. It maps argument names to ints.
+  var count = Object.create(null);
+  argumentNameList.forEach(function(argName) {
+    count[argName] = (count[argName] || 0) + 1;
+  });
+
+  // Append subscripts ('_1', '_2', ...) to duplicate argument names.
+  Object.keys(count).forEach(function(dupArgName) {
+    if (count[dupArgName] <= 1) {
+      return;
+    }
+
+    // This name shows up more than once, so add subscripts.
+    var subscript = 1;
+    argumentNameList.forEach(function(argName, idx) {
+      if (argName === dupArgName) {
+        argumentNameList[idx] = argName + '_' + subscript++;
+      }
+    });
+  });
+
+  return argumentNameList;
+};
+
+pexprs.Iter.prototype.toArgumentNameList = function(firstArgIndex) {
+  return this.expr.toArgumentNameList(firstArgIndex).map(function(exprArgumentString) {
+    return exprArgumentString[exprArgumentString.length - 1] === 's' ?
+        exprArgumentString + 'es' :
+        exprArgumentString + 's';
+  });
+};
+
+pexprs.Opt.prototype.toArgumentNameList = function(firstArgIndex) {
+  return this.expr.toArgumentNameList(firstArgIndex).map(function(argName) {
+    return 'opt' + argName[0].toUpperCase() + argName.slice(1);
+  });
+};
+
+pexprs.Not.prototype.toArgumentNameList = function(firstArgIndex) {
+  return [];
+};
+
+pexprs.Lookahead.prototype.toArgumentNameList =
+pexprs.Lex.prototype.toArgumentNameList = function(firstArgIndex) {
+  return this.expr.toArgumentNameList(firstArgIndex);
+};
+
+pexprs.Apply.prototype.toArgumentNameList = function(firstArgIndex) {
+  return [this.ruleName];
+};
+
+pexprs.UnicodeChar.prototype.toArgumentNameList = function(firstArgIndex) {
+  return '$' + firstArgIndex;
+};
+
+// "Value pexprs" (Value, Str, Arr, Obj) are going away soon, so we don't worry about them here.
+
+},{"./common":48,"./pexprs":69}],66:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -8032,11 +8499,7 @@ pexprs.UnicodeChar.prototype.toDisplayString = function() {
   return 'Unicode {' + this.category + '} character';
 };
 
-pexprs.TypeCheck.prototype.toDisplayString = function() {
-  return 'TypeCheck(' + JSON.stringify(this.type) + ')';
-};
-
-},{"./common":48,"./pexprs":67}],65:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],67:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -8094,11 +8557,7 @@ pexprs.UnicodeChar.prototype.toFailure = function(grammar) {
   return new Failure(this.toDisplayString(), 'description');
 };
 
-pexprs.TypeCheck.prototype.toFailure = function(grammar) {
-  return new Failure('a value of type ' + JSON.stringify(this.type), 'description');
-};
-
-},{"./Failure":37,"./common":48,"./pexprs":67}],66:[function(require,module,exports){
+},{"./Failure":37,"./common":48,"./pexprs":69}],68:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -8214,11 +8673,7 @@ pexprs.UnicodeChar.prototype.toString = function() {
   return '\\p{' + this.category + '}';
 };
 
-pexprs.TypeCheck.prototype.toString = function() {
-  return 'TypeCheck(' + JSON.stringify(this.type) + ')';
-};
-
-},{"./common":48,"./pexprs":67}],67:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],69:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -8429,17 +8884,12 @@ Apply.prototype.toMemoKey = function() {
 };
 
 // Unicode character
+
 function UnicodeChar(category) {
   this.category = category;
   this.pattern = UnicodeCategories[category];
 }
 inherits(UnicodeChar, PExpr);
-
-// Matches a value of a particular type (using `typeof`).
-function TypeCheck(t) {
-  this.type = t;
-}
-inherits(TypeCheck, PExpr);
 
 // --------------------------------------------------------------------
 // Exports
@@ -8472,12 +8922,12 @@ exports.Str = Str;
 exports.Obj = Obj;
 exports.Apply = Apply;
 exports.UnicodeChar = UnicodeChar;
-exports.TypeCheck = TypeCheck;
 
 // --------------------------------------------------------------------
 // Extensions
 // --------------------------------------------------------------------
 
+require('./pexprs-allowsSkippingPrecedingSpace');
 require('./pexprs-assertAllApplicationsAreValid');
 require('./pexprs-assertChoicesHaveUniformArity');
 require('./pexprs-assertIteratedExprsAreNotNullable');
@@ -8491,10 +8941,11 @@ require('./pexprs-introduceParams');
 require('./pexprs-isNullable');
 require('./pexprs-substituteParams');
 require('./pexprs-toDisplayString');
+require('./pexprs-toArgumentNameList');
 require('./pexprs-toFailure');
 require('./pexprs-toString');
 
-},{"../third_party/UnicodeCategories":69,"./InputStream":40,"./common":48,"./errors":49,"./pexprs-assertAllApplicationsAreValid":52,"./pexprs-assertChoicesHaveUniformArity":53,"./pexprs-assertIteratedExprsAreNotNullable":54,"./pexprs-assertValuesAndStringsAreNotMixed":55,"./pexprs-check":56,"./pexprs-eval":57,"./pexprs-getArity":58,"./pexprs-getExprType":59,"./pexprs-introduceParams":60,"./pexprs-isNullable":61,"./pexprs-outputRecipe":62,"./pexprs-substituteParams":63,"./pexprs-toDisplayString":64,"./pexprs-toFailure":65,"./pexprs-toString":66,"inherits":33}],68:[function(require,module,exports){
+},{"../third_party/UnicodeCategories":71,"./InputStream":40,"./common":48,"./errors":49,"./pexprs-allowsSkippingPrecedingSpace":52,"./pexprs-assertAllApplicationsAreValid":53,"./pexprs-assertChoicesHaveUniformArity":54,"./pexprs-assertIteratedExprsAreNotNullable":55,"./pexprs-assertValuesAndStringsAreNotMixed":56,"./pexprs-check":57,"./pexprs-eval":58,"./pexprs-getArity":59,"./pexprs-getExprType":60,"./pexprs-introduceParams":61,"./pexprs-isNullable":62,"./pexprs-outputRecipe":63,"./pexprs-substituteParams":64,"./pexprs-toArgumentNameList":65,"./pexprs-toDisplayString":66,"./pexprs-toFailure":67,"./pexprs-toString":68,"inherits":33}],70:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -8644,7 +9095,7 @@ exports.getLineAndColumnMessage = function(str, offset /* ...ranges */) {
   return sb.contents();
 };
 
-},{"./common":48}],69:[function(require,module,exports){
+},{"./common":48}],71:[function(require,module,exports){
 // Based on https://github.com/tvcutsem/es-lab/blob/master/src/parser/unicode.js.
 // These are just categories that are used in ES5.
 // The full list of Unicode categories is here: http://www.fileformat.info/info/unicode/category/index.htm.
