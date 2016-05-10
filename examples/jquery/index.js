@@ -19,7 +19,7 @@ $(document).ready(function () {
 	handleEvent: function (e) {
 	  if (e.type === 'message'
               && Syndicate.JQuery.jQueryEvent.isClassOf(e.message)
-              && e.message.selector === '#clicker')
+              && e.message[0] === '#clicker')
           {
 	    var r = $('#result');
 	    r.html(Number(r.html()) + 1);
@@ -27,8 +27,8 @@ $(document).ready(function () {
 	}
       });
     });
-    G.dataspace.onStateChange = function (mux, patch) {
+    G.dataspace.setOnStateChange(function (mux, patch) {
       $("#spy-holder").text(Syndicate.prettyTrie(mux.routingTable));
-    };
+    });
     G.startStepping();
 });
