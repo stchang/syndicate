@@ -15,7 +15,7 @@ function spawnTV() {
   actor {
     react {
       during tvAlert($text) {
-        assert DOM('#tv', 'alert', Syndicate.seal(["li", text]));
+        assert DOM('#tv', 'alert', Mustache.render($('#alert_template').html(), { text: text }));
       }
     }
   }
@@ -68,9 +68,9 @@ function spawnStoveSwitch() {
       assert switchState(this.powerOn);
 
       assert DOM('#stove-switch', 'switch-state',
-                 Syndicate.seal(["img", [["src",
-                                          "img/stove-coil-element-" +
-                                          (this.powerOn ? "hot" : "cold") + ".jpg"]]]));
+                 Mustache.render($('#stove_element_template').html(),
+                                 { imgurl: ("img/stove-coil-element-" +
+                                            (this.powerOn ? "hot" : "cold") + ".jpg") }));
 
       on message jQueryEvent('#stove-switch-on', 'click', _) { this.powerOn = true; }
       on message jQueryEvent('#stove-switch-off', 'click', _) { this.powerOn = false; }
@@ -92,9 +92,7 @@ function spawnPowerDrawMonitor() {
       assert powerDraw(this.watts);
 
       assert DOM('#power-draw-meter', 'power-draw',
-                 Syndicate.seal(["p", "Power draw: ",
-                                 ["span", [["class", "power-meter-display"]],
-                                  this.watts + " W"]]));
+                 Mustache.render($('#power_draw_template').html(), { watts: this.watts }));
 
       on asserted switchState($on) {
         this.watts = on ? 1500 : 0;
@@ -185,12 +183,32 @@ function spawnFailureMonitor() {
 
 function spawnChaosMonkey() {
   actor {
+    monitorComponent('power draw monitor',
+                     '#spawn-power-draw-monitor',
+                     '#kill-power-draw-monitor',
+                     spawnPowerDrawMonitor);
+    monitorComponent('stove switch',
+                     '#spawn-stove-switch',
+                     '#kill-stove-switch',
+                     spawnStoveSwitch);
+  }
+
+  function monitorComponent(name, spawnButtonSelector, killButtonSelector, spawnFunction) {
+    var jSpawnButtons = $(spawnButtonSelector);
+    var jKillButtons = $(killButtonSelector);
     react {
-      on message jQueryEvent('#spawn-power-draw-monitor', 'click', _) {
-        spawnPowerDrawMonitor();
+      during componentPresent(name) {
+        do {
+          jSpawnButtons.prop('disabled', true);
+          jKillButtons.prop('disabled', false);
+        }
+        finally {
+          jSpawnButtons.prop('disabled', false);
+          jKillButtons.prop('disabled', true);
+        }
       }
-      on message jQueryEvent('#spawn-stove-switch', 'click', _) {
-        spawnStoveSwitch();
+      on message jQueryEvent(spawnButtonSelector, 'click', _) {
+        spawnFunction();
       }
     }
   }
