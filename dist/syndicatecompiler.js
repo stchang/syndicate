@@ -2678,9 +2678,6 @@ var currentQueue;
 var queueIndex = -1;
 
 function cleanUpNextTick() {
-    if (!draining || !currentQueue) {
-        return;
-    }
     draining = false;
     if (currentQueue.length) {
         queue = currentQueue.concat(queue);
@@ -2788,63 +2785,75 @@ module.exports = ohm.makeRecipe(function() {
 var ohm = require('..');
 module.exports = ohm.makeRecipe(function() {
   var decl = this.newGrammar("Ohm")
-    .withSource("Ohm {\n\n  Grammars\n    = Grammar*\n\n  Grammar\n    = ident SuperGrammar? \"{\" Rule* \"}\"\n\n  SuperGrammar\n    = \"<:\" ident\n\n  Rule\n    = ident Formals? ruleDescr? \"=\"  \"|\"? Alt  -- define\n    | ident Formals?            \":=\" \"|\"? Alt  -- override\n    | ident Formals?            \"+=\" \"|\"? Alt  -- extend\n\n  Formals\n    = \"<\" ListOf<ident, \",\"> \">\"\n\n  Params\n    = \"<\" ListOf<Seq, \",\"> \">\"\n\n  Alt\n    = Term (\"|\" Term)*\n\n  Term\n    = Seq caseName -- inline\n    | Seq\n\n  Seq\n    = Iter*\n\n  Iter\n    = Pred \"*\"  -- star\n    | Pred \"+\"  -- plus\n    | Pred \"?\"  -- opt\n    | Pred\n\n  Pred\n    = \"~\" Lex  -- not\n    | \"&\" Lex  -- lookahead\n    | Lex\n\n  Lex\n    = \"#\" Base  -- lex\n    | Base\n\n  Base\n    = ident Params? ~(ruleDescr? \"=\" | \":=\" | \"+=\")  -- application\n    | terminal \"..\" terminal                         -- range\n    | terminal                                       -- terminal\n    | \"(\" Alt \")\"                                    -- paren\n\n  ruleDescr  (a rule description)\n    = \"(\" ruleDescrText \")\"\n\n  ruleDescrText\n    = (~\")\" any)*\n\n  caseName\n    = \"--\" (~\"\\n\" space)* name (~\"\\n\" space)* (\"\\n\" | &\"}\")\n\n  name  (a name)\n    = nameFirst nameRest*\n\n  nameFirst\n    = \"_\"\n    | letter\n\n  nameRest\n    = \"_\"\n    | alnum\n\n  ident  (an identifier)\n    = name\n\n  terminal\n    = \"\\\"\" terminalChar* \"\\\"\"\n\n  terminalChar\n    = escapeChar\n    | ~\"\\\\\" ~\"\\\"\" ~\"\\n\" any\n\n  escapeChar  (an escape sequence)\n    = \"\\\\\\\\\"                                     -- backslash\n    | \"\\\\\\\"\"                                     -- doubleQuote\n    | \"\\\\\\'\"                                     -- singleQuote\n    | \"\\\\b\"                                      -- backspace\n    | \"\\\\n\"                                      -- lineFeed\n    | \"\\\\r\"                                      -- carriageReturn\n    | \"\\\\t\"                                      -- tab\n    | \"\\\\u\" hexDigit hexDigit hexDigit hexDigit  -- unicodeEscape\n    | \"\\\\x\" hexDigit hexDigit                    -- hexEscape\n\n  space\n   += comment\n\n  comment\n    = \"//\" (~\"\\n\" any)* \"\\n\"  -- singleLine\n    | \"/*\" (~\"*/\" any)* \"*/\"  -- multiLine\n\n  tokens = token*\n\n  token = caseName | comment | ident | operator | punctuation | terminal | any\n\n  operator = \"<:\" | \"=\" | \":=\" | \"+=\" | \"*\" | \"+\" | \"?\" | \"~\" | \"&\"\n\n  punctuation = \"<\" | \">\" | \",\" | \"--\"\n}")
+    .withSource("Ohm {\n\n  Grammars\n    = Grammar*\n\n  Grammar\n    = ident SuperGrammar? \"{\" Rule* \"}\"\n\n  SuperGrammar\n    = \"<:\" ident\n\n  Rule\n    = ident Formals? ruleDescr? \"=\"  \"|\"? Alt  -- define\n    | ident Formals?            \":=\" \"|\"? Alt  -- override\n    | ident Formals?            \"+=\" \"|\"? Alt  -- extend\n\n  Formals\n    = \"<\" ListOf<ident, \",\"> \">\"\n\n  Params\n    = \"<\" ListOf<Seq, \",\"> \">\"\n\n  Alt\n    = Term (\"|\" Term)*\n\n  Term\n    = Seq caseName -- inline\n    | Seq\n\n  Seq\n    = Iter*\n\n  Iter\n    = Pred \"*\"  -- star\n    | Pred \"+\"  -- plus\n    | Pred \"?\"  -- opt\n    | Pred\n\n  Pred\n    = \"~\" Modifier  -- not\n    | \"&\" Modifier  -- lookahead\n    | Modifier\n\n  Modifier\n    = \"#\" Base  -- lex\n    | \"$\" Base  -- val\n    | Base\n\n  Base\n    = ident Params? ~(ruleDescr? \"=\" | \":=\" | \"+=\")  -- application\n    | Prim \"..\" Prim                                 -- range\n    | Prim                                           -- prim\n    | \"(\" Alt \")\"                                    -- paren\n    | \"[\" Alt \"]\"                                    -- arr\n    | \"{\" \"...\"? \"}\"                                 -- obj\n    | \"{\" Props (\",\" \"...\")? \"}\"                     -- objWithProps\n\n  Prim\n    = keyword\n    | string\n    | number\n\n  Props\n    = Prop (\",\" Prop)*\n\n  Prop\n    = (name | string) \":\" Alt\n\n  ruleDescr  (a rule description)\n    = \"(\" ruleDescrText \")\"\n\n  ruleDescrText\n    = (~\")\" any)*\n\n  caseName\n    = \"--\" (~\"\\n\" space)* name (~\"\\n\" space)* (\"\\n\" | &\"}\")\n\n  name  (a name)\n    = nameFirst nameRest*\n\n  nameFirst\n    = \"_\"\n    | letter\n\n  nameRest\n    = \"_\"\n    | alnum\n\n  ident  (an identifier)\n    = ~keyword name\n\n  keyword\n    = \"null\" ~nameRest   -- null\n    | \"true\" ~nameRest   -- true\n    | \"false\" ~nameRest  -- false\n\n  string\n    = \"\\\"\" strChar* \"\\\"\"\n\n  strChar\n    = escapeChar\n    | ~\"\\\\\" ~\"\\\"\" ~\"\\n\" any\n\n  escapeChar  (an escape sequence)\n    = \"\\\\\\\\\"                                     -- backslash\n    | \"\\\\\\\"\"                                     -- doubleQuote\n    | \"\\\\\\'\"                                     -- singleQuote\n    | \"\\\\b\"                                      -- backspace\n    | \"\\\\n\"                                      -- lineFeed\n    | \"\\\\r\"                                      -- carriageReturn\n    | \"\\\\t\"                                      -- tab\n    | \"\\\\u\" hexDigit hexDigit hexDigit hexDigit  -- unicodeEscape\n    | \"\\\\x\" hexDigit hexDigit                    -- hexEscape\n\n  number  (a number)\n    = \"-\"? digit+\n\n  space\n   += comment\n\n  comment\n    = \"//\" (~\"\\n\" any)* \"\\n\"  -- singleLine\n    | \"/*\" (~\"*/\" any)* \"*/\"  -- multiLine\n\n  tokens = token*\n\n  token = caseName | comment | ident | keyword | number | operator | punctuation | string | any\n\n  operator = \"<:\" | \"=\" | \":=\" | \"+=\" | \"*\" | \"+\" | \"?\" | \"~\" | \"&\"\n\n  punctuation = \"<\" | \">\" | \",\" | \"--\"\n}")
     .withDefaultStartRule("Grammars")
   return decl
     .define("Grammars", [], this.star(this.app("Grammar").withInterval(decl.sourceInterval(24, 31))).withInterval(decl.sourceInterval(24, 32)))
-    .define("Grammar", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(50, 55)), this.opt(this.app("SuperGrammar").withInterval(decl.sourceInterval(56, 68))).withInterval(decl.sourceInterval(56, 69)), this.terminal("{").withInterval(decl.sourceInterval(70, 73)), this.star(this.app("Rule").withInterval(decl.sourceInterval(74, 78))).withInterval(decl.sourceInterval(74, 79)), this.terminal("}").withInterval(decl.sourceInterval(80, 83))).withInterval(decl.sourceInterval(50, 83)))
-    .define("SuperGrammar", [], this.seq(this.terminal("<:").withInterval(decl.sourceInterval(106, 110)), this.app("ident").withInterval(decl.sourceInterval(111, 116))).withInterval(decl.sourceInterval(106, 116)))
-    .define("Rule_define", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(131, 136)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(137, 144))).withInterval(decl.sourceInterval(137, 145)), this.opt(this.app("ruleDescr").withInterval(decl.sourceInterval(146, 155))).withInterval(decl.sourceInterval(146, 156)), this.terminal("=").withInterval(decl.sourceInterval(157, 160)), this.opt(this.terminal("|").withInterval(decl.sourceInterval(162, 165))).withInterval(decl.sourceInterval(162, 166)), this.app("Alt").withInterval(decl.sourceInterval(167, 170))).withInterval(decl.sourceInterval(131, 170)))
-    .define("Rule_override", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(188, 193)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(194, 201))).withInterval(decl.sourceInterval(194, 202)), this.terminal(":=").withInterval(decl.sourceInterval(214, 218)), this.opt(this.terminal("|").withInterval(decl.sourceInterval(219, 222))).withInterval(decl.sourceInterval(219, 223)), this.app("Alt").withInterval(decl.sourceInterval(224, 227))).withInterval(decl.sourceInterval(188, 227)))
-    .define("Rule_extend", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(247, 252)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(253, 260))).withInterval(decl.sourceInterval(253, 261)), this.terminal("+=").withInterval(decl.sourceInterval(273, 277)), this.opt(this.terminal("|").withInterval(decl.sourceInterval(278, 281))).withInterval(decl.sourceInterval(278, 282)), this.app("Alt").withInterval(decl.sourceInterval(283, 286))).withInterval(decl.sourceInterval(247, 286)))
+    .define("Grammar", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(50, 55)), this.opt(this.app("SuperGrammar").withInterval(decl.sourceInterval(56, 68))).withInterval(decl.sourceInterval(56, 69)), this.prim("{").withInterval(decl.sourceInterval(70, 73)), this.star(this.app("Rule").withInterval(decl.sourceInterval(74, 78))).withInterval(decl.sourceInterval(74, 79)), this.prim("}").withInterval(decl.sourceInterval(80, 83))).withInterval(decl.sourceInterval(50, 83)))
+    .define("SuperGrammar", [], this.seq(this.prim("<:").withInterval(decl.sourceInterval(106, 110)), this.app("ident").withInterval(decl.sourceInterval(111, 116))).withInterval(decl.sourceInterval(106, 116)))
+    .define("Rule_define", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(131, 136)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(137, 144))).withInterval(decl.sourceInterval(137, 145)), this.opt(this.app("ruleDescr").withInterval(decl.sourceInterval(146, 155))).withInterval(decl.sourceInterval(146, 156)), this.prim("=").withInterval(decl.sourceInterval(157, 160)), this.opt(this.prim("|").withInterval(decl.sourceInterval(162, 165))).withInterval(decl.sourceInterval(162, 166)), this.app("Alt").withInterval(decl.sourceInterval(167, 170))).withInterval(decl.sourceInterval(131, 170)))
+    .define("Rule_override", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(188, 193)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(194, 201))).withInterval(decl.sourceInterval(194, 202)), this.prim(":=").withInterval(decl.sourceInterval(214, 218)), this.opt(this.prim("|").withInterval(decl.sourceInterval(219, 222))).withInterval(decl.sourceInterval(219, 223)), this.app("Alt").withInterval(decl.sourceInterval(224, 227))).withInterval(decl.sourceInterval(188, 227)))
+    .define("Rule_extend", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(247, 252)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(253, 260))).withInterval(decl.sourceInterval(253, 261)), this.prim("+=").withInterval(decl.sourceInterval(273, 277)), this.opt(this.prim("|").withInterval(decl.sourceInterval(278, 281))).withInterval(decl.sourceInterval(278, 282)), this.app("Alt").withInterval(decl.sourceInterval(283, 286))).withInterval(decl.sourceInterval(247, 286)))
     .define("Rule", [], this.alt(this.app("Rule_define").withInterval(decl.sourceInterval(131, 170)), this.app("Rule_override").withInterval(decl.sourceInterval(188, 227)), this.app("Rule_extend").withInterval(decl.sourceInterval(247, 286))).withInterval(decl.sourceInterval(131, 297)))
-    .define("Formals", [], this.seq(this.terminal("<").withInterval(decl.sourceInterval(315, 318)), this.app("ListOf", [this.app("ident").withInterval(decl.sourceInterval(326, 331)), this.terminal(",").withInterval(decl.sourceInterval(333, 336))]).withInterval(decl.sourceInterval(319, 337)), this.terminal(">").withInterval(decl.sourceInterval(338, 341))).withInterval(decl.sourceInterval(315, 341)))
-    .define("Params", [], this.seq(this.terminal("<").withInterval(decl.sourceInterval(358, 361)), this.app("ListOf", [this.app("Seq").withInterval(decl.sourceInterval(369, 372)), this.terminal(",").withInterval(decl.sourceInterval(374, 377))]).withInterval(decl.sourceInterval(362, 378)), this.terminal(">").withInterval(decl.sourceInterval(379, 382))).withInterval(decl.sourceInterval(358, 382)))
-    .define("Alt", [], this.seq(this.app("Term").withInterval(decl.sourceInterval(396, 400)), this.star(this.seq(this.terminal("|").withInterval(decl.sourceInterval(402, 405)), this.app("Term").withInterval(decl.sourceInterval(406, 410))).withInterval(decl.sourceInterval(402, 410))).withInterval(decl.sourceInterval(401, 412))).withInterval(decl.sourceInterval(396, 412)))
+    .define("Formals", [], this.seq(this.prim("<").withInterval(decl.sourceInterval(315, 318)), this.app("ListOf", [this.app("ident").withInterval(decl.sourceInterval(326, 331)), this.prim(",").withInterval(decl.sourceInterval(333, 336))]).withInterval(decl.sourceInterval(319, 337)), this.prim(">").withInterval(decl.sourceInterval(338, 341))).withInterval(decl.sourceInterval(315, 341)))
+    .define("Params", [], this.seq(this.prim("<").withInterval(decl.sourceInterval(358, 361)), this.app("ListOf", [this.app("Seq").withInterval(decl.sourceInterval(369, 372)), this.prim(",").withInterval(decl.sourceInterval(374, 377))]).withInterval(decl.sourceInterval(362, 378)), this.prim(">").withInterval(decl.sourceInterval(379, 382))).withInterval(decl.sourceInterval(358, 382)))
+    .define("Alt", [], this.seq(this.app("Term").withInterval(decl.sourceInterval(396, 400)), this.star(this.seq(this.prim("|").withInterval(decl.sourceInterval(402, 405)), this.app("Term").withInterval(decl.sourceInterval(406, 410))).withInterval(decl.sourceInterval(402, 410))).withInterval(decl.sourceInterval(401, 412))).withInterval(decl.sourceInterval(396, 412)))
     .define("Term_inline", [], this.seq(this.app("Seq").withInterval(decl.sourceInterval(427, 430)), this.app("caseName").withInterval(decl.sourceInterval(431, 439))).withInterval(decl.sourceInterval(427, 439)))
     .define("Term", [], this.alt(this.app("Term_inline").withInterval(decl.sourceInterval(427, 439)), this.app("Seq").withInterval(decl.sourceInterval(456, 459))).withInterval(decl.sourceInterval(427, 459)))
     .define("Seq", [], this.star(this.app("Iter").withInterval(decl.sourceInterval(473, 477))).withInterval(decl.sourceInterval(473, 478)))
-    .define("Iter_star", [], this.seq(this.app("Pred").withInterval(decl.sourceInterval(493, 497)), this.terminal("*").withInterval(decl.sourceInterval(498, 501))).withInterval(decl.sourceInterval(493, 501)))
-    .define("Iter_plus", [], this.seq(this.app("Pred").withInterval(decl.sourceInterval(517, 521)), this.terminal("+").withInterval(decl.sourceInterval(522, 525))).withInterval(decl.sourceInterval(517, 525)))
-    .define("Iter_opt", [], this.seq(this.app("Pred").withInterval(decl.sourceInterval(541, 545)), this.terminal("?").withInterval(decl.sourceInterval(546, 549))).withInterval(decl.sourceInterval(541, 549)))
+    .define("Iter_star", [], this.seq(this.app("Pred").withInterval(decl.sourceInterval(493, 497)), this.prim("*").withInterval(decl.sourceInterval(498, 501))).withInterval(decl.sourceInterval(493, 501)))
+    .define("Iter_plus", [], this.seq(this.app("Pred").withInterval(decl.sourceInterval(517, 521)), this.prim("+").withInterval(decl.sourceInterval(522, 525))).withInterval(decl.sourceInterval(517, 525)))
+    .define("Iter_opt", [], this.seq(this.app("Pred").withInterval(decl.sourceInterval(541, 545)), this.prim("?").withInterval(decl.sourceInterval(546, 549))).withInterval(decl.sourceInterval(541, 549)))
     .define("Iter", [], this.alt(this.app("Iter_star").withInterval(decl.sourceInterval(493, 501)), this.app("Iter_plus").withInterval(decl.sourceInterval(517, 525)), this.app("Iter_opt").withInterval(decl.sourceInterval(541, 549)), this.app("Pred").withInterval(decl.sourceInterval(564, 568))).withInterval(decl.sourceInterval(493, 568)))
-    .define("Pred_not", [], this.seq(this.terminal("~").withInterval(decl.sourceInterval(583, 586)), this.app("Lex").withInterval(decl.sourceInterval(587, 590))).withInterval(decl.sourceInterval(583, 590)))
-    .define("Pred_lookahead", [], this.seq(this.terminal("&").withInterval(decl.sourceInterval(605, 608)), this.app("Lex").withInterval(decl.sourceInterval(609, 612))).withInterval(decl.sourceInterval(605, 612)))
-    .define("Pred", [], this.alt(this.app("Pred_not").withInterval(decl.sourceInterval(583, 590)), this.app("Pred_lookahead").withInterval(decl.sourceInterval(605, 612)), this.app("Lex").withInterval(decl.sourceInterval(633, 636))).withInterval(decl.sourceInterval(583, 636)))
-    .define("Lex_lex", [], this.seq(this.terminal("#").withInterval(decl.sourceInterval(650, 653)), this.app("Base").withInterval(decl.sourceInterval(654, 658))).withInterval(decl.sourceInterval(650, 658)))
-    .define("Lex", [], this.alt(this.app("Lex_lex").withInterval(decl.sourceInterval(650, 658)), this.app("Base").withInterval(decl.sourceInterval(673, 677))).withInterval(decl.sourceInterval(650, 677)))
-    .define("Base_application", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(692, 697)), this.opt(this.app("Params").withInterval(decl.sourceInterval(698, 704))).withInterval(decl.sourceInterval(698, 705)), this.not(this.alt(this.seq(this.opt(this.app("ruleDescr").withInterval(decl.sourceInterval(708, 717))).withInterval(decl.sourceInterval(708, 718)), this.terminal("=").withInterval(decl.sourceInterval(719, 722))).withInterval(decl.sourceInterval(708, 722)), this.terminal(":=").withInterval(decl.sourceInterval(725, 729)), this.terminal("+=").withInterval(decl.sourceInterval(732, 736))).withInterval(decl.sourceInterval(708, 736))).withInterval(decl.sourceInterval(706, 737))).withInterval(decl.sourceInterval(692, 737)))
-    .define("Base_range", [], this.seq(this.app("terminal").withInterval(decl.sourceInterval(760, 768)), this.terminal("..").withInterval(decl.sourceInterval(769, 773)), this.app("terminal").withInterval(decl.sourceInterval(774, 782))).withInterval(decl.sourceInterval(760, 782)))
-    .define("Base_terminal", [], this.app("terminal").withInterval(decl.sourceInterval(822, 830)))
-    .define("Base_paren", [], this.seq(this.terminal("(").withInterval(decl.sourceInterval(887, 890)), this.app("Alt").withInterval(decl.sourceInterval(891, 894)), this.terminal(")").withInterval(decl.sourceInterval(895, 898))).withInterval(decl.sourceInterval(887, 898)))
-    .define("Base", [], this.alt(this.app("Base_application").withInterval(decl.sourceInterval(692, 737)), this.app("Base_range").withInterval(decl.sourceInterval(760, 782)), this.app("Base_terminal").withInterval(decl.sourceInterval(822, 830)), this.app("Base_paren").withInterval(decl.sourceInterval(887, 898))).withInterval(decl.sourceInterval(692, 942)))
-    .define("ruleDescr", [], this.seq(this.terminal("(").withInterval(decl.sourceInterval(984, 987)), this.app("ruleDescrText").withInterval(decl.sourceInterval(988, 1001)), this.terminal(")").withInterval(decl.sourceInterval(1002, 1005))).withInterval(decl.sourceInterval(984, 1005)), "a rule description")
-    .define("ruleDescrText", [], this.star(this.seq(this.not(this.terminal(")").withInterval(decl.sourceInterval(1031, 1034))).withInterval(decl.sourceInterval(1030, 1034)), this.app("any").withInterval(decl.sourceInterval(1035, 1038))).withInterval(decl.sourceInterval(1030, 1038))).withInterval(decl.sourceInterval(1029, 1040)))
-    .define("caseName", [], this.seq(this.terminal("--").withInterval(decl.sourceInterval(1059, 1063)), this.star(this.seq(this.not(this.terminal("\n").withInterval(decl.sourceInterval(1066, 1070))).withInterval(decl.sourceInterval(1065, 1070)), this.app("space").withInterval(decl.sourceInterval(1071, 1076))).withInterval(decl.sourceInterval(1065, 1076))).withInterval(decl.sourceInterval(1064, 1078)), this.app("name").withInterval(decl.sourceInterval(1079, 1083)), this.star(this.seq(this.not(this.terminal("\n").withInterval(decl.sourceInterval(1086, 1090))).withInterval(decl.sourceInterval(1085, 1090)), this.app("space").withInterval(decl.sourceInterval(1091, 1096))).withInterval(decl.sourceInterval(1085, 1096))).withInterval(decl.sourceInterval(1084, 1098)), this.alt(this.terminal("\n").withInterval(decl.sourceInterval(1100, 1104)), this.la(this.terminal("}").withInterval(decl.sourceInterval(1108, 1111))).withInterval(decl.sourceInterval(1107, 1111))).withInterval(decl.sourceInterval(1100, 1111))).withInterval(decl.sourceInterval(1059, 1112)))
-    .define("name", [], this.seq(this.app("nameFirst").withInterval(decl.sourceInterval(1137, 1146)), this.star(this.app("nameRest").withInterval(decl.sourceInterval(1147, 1155))).withInterval(decl.sourceInterval(1147, 1156))).withInterval(decl.sourceInterval(1137, 1156)), "a name")
-    .define("nameFirst", [], this.alt(this.terminal("_").withInterval(decl.sourceInterval(1176, 1179)), this.app("letter").withInterval(decl.sourceInterval(1186, 1192))).withInterval(decl.sourceInterval(1176, 1192)))
-    .define("nameRest", [], this.alt(this.terminal("_").withInterval(decl.sourceInterval(1211, 1214)), this.app("alnum").withInterval(decl.sourceInterval(1221, 1226))).withInterval(decl.sourceInterval(1211, 1226)))
-    .define("ident", [], this.app("name").withInterval(decl.sourceInterval(1259, 1263)), "an identifier")
-    .define("terminal", [], this.seq(this.terminal("\"").withInterval(decl.sourceInterval(1282, 1286)), this.star(this.app("terminalChar").withInterval(decl.sourceInterval(1287, 1299))).withInterval(decl.sourceInterval(1287, 1300)), this.terminal("\"").withInterval(decl.sourceInterval(1301, 1305))).withInterval(decl.sourceInterval(1282, 1305)))
-    .define("terminalChar", [], this.alt(this.app("escapeChar").withInterval(decl.sourceInterval(1328, 1338)), this.seq(this.not(this.terminal("\\").withInterval(decl.sourceInterval(1346, 1350))).withInterval(decl.sourceInterval(1345, 1350)), this.not(this.terminal("\"").withInterval(decl.sourceInterval(1352, 1356))).withInterval(decl.sourceInterval(1351, 1356)), this.not(this.terminal("\n").withInterval(decl.sourceInterval(1358, 1362))).withInterval(decl.sourceInterval(1357, 1362)), this.app("any").withInterval(decl.sourceInterval(1363, 1366))).withInterval(decl.sourceInterval(1345, 1366))).withInterval(decl.sourceInterval(1328, 1366)))
-    .define("escapeChar_backslash", [], this.terminal("\\\\").withInterval(decl.sourceInterval(1409, 1415)))
-    .define("escapeChar_doubleQuote", [], this.terminal("\\\"").withInterval(decl.sourceInterval(1471, 1477)))
-    .define("escapeChar_singleQuote", [], this.terminal("\\'").withInterval(decl.sourceInterval(1535, 1541)))
-    .define("escapeChar_backspace", [], this.terminal("\\b").withInterval(decl.sourceInterval(1599, 1604)))
-    .define("escapeChar_lineFeed", [], this.terminal("\\n").withInterval(decl.sourceInterval(1661, 1666)))
-    .define("escapeChar_carriageReturn", [], this.terminal("\\r").withInterval(decl.sourceInterval(1722, 1727)))
-    .define("escapeChar_tab", [], this.terminal("\\t").withInterval(decl.sourceInterval(1789, 1794)))
-    .define("escapeChar_unicodeEscape", [], this.seq(this.terminal("\\u").withInterval(decl.sourceInterval(1845, 1850)), this.app("hexDigit").withInterval(decl.sourceInterval(1851, 1859)), this.app("hexDigit").withInterval(decl.sourceInterval(1860, 1868)), this.app("hexDigit").withInterval(decl.sourceInterval(1869, 1877)), this.app("hexDigit").withInterval(decl.sourceInterval(1878, 1886))).withInterval(decl.sourceInterval(1845, 1886)))
-    .define("escapeChar_hexEscape", [], this.seq(this.terminal("\\x").withInterval(decl.sourceInterval(1911, 1916)), this.app("hexDigit").withInterval(decl.sourceInterval(1917, 1925)), this.app("hexDigit").withInterval(decl.sourceInterval(1926, 1934))).withInterval(decl.sourceInterval(1911, 1934)))
-    .define("escapeChar", [], this.alt(this.app("escapeChar_backslash").withInterval(decl.sourceInterval(1409, 1415)), this.app("escapeChar_doubleQuote").withInterval(decl.sourceInterval(1471, 1477)), this.app("escapeChar_singleQuote").withInterval(decl.sourceInterval(1535, 1541)), this.app("escapeChar_backspace").withInterval(decl.sourceInterval(1599, 1604)), this.app("escapeChar_lineFeed").withInterval(decl.sourceInterval(1661, 1666)), this.app("escapeChar_carriageReturn").withInterval(decl.sourceInterval(1722, 1727)), this.app("escapeChar_tab").withInterval(decl.sourceInterval(1789, 1794)), this.app("escapeChar_unicodeEscape").withInterval(decl.sourceInterval(1845, 1886)), this.app("escapeChar_hexEscape").withInterval(decl.sourceInterval(1911, 1934))).withInterval(decl.sourceInterval(1409, 1966)), "an escape sequence")
-    .extend("space", [], this.app("comment").withInterval(decl.sourceInterval(1982, 1989)))
-    .define("comment_singleLine", [], this.seq(this.terminal("//").withInterval(decl.sourceInterval(2007, 2011)), this.star(this.seq(this.not(this.terminal("\n").withInterval(decl.sourceInterval(2014, 2018))).withInterval(decl.sourceInterval(2013, 2018)), this.app("any").withInterval(decl.sourceInterval(2019, 2022))).withInterval(decl.sourceInterval(2013, 2022))).withInterval(decl.sourceInterval(2012, 2024)), this.terminal("\n").withInterval(decl.sourceInterval(2025, 2029))).withInterval(decl.sourceInterval(2007, 2029)))
-    .define("comment_multiLine", [], this.seq(this.terminal("/*").withInterval(decl.sourceInterval(2051, 2055)), this.star(this.seq(this.not(this.terminal("*/").withInterval(decl.sourceInterval(2058, 2062))).withInterval(decl.sourceInterval(2057, 2062)), this.app("any").withInterval(decl.sourceInterval(2063, 2066))).withInterval(decl.sourceInterval(2057, 2066))).withInterval(decl.sourceInterval(2056, 2068)), this.terminal("*/").withInterval(decl.sourceInterval(2069, 2073))).withInterval(decl.sourceInterval(2051, 2073)))
-    .define("comment", [], this.alt(this.app("comment_singleLine").withInterval(decl.sourceInterval(2007, 2029)), this.app("comment_multiLine").withInterval(decl.sourceInterval(2051, 2073))).withInterval(decl.sourceInterval(2007, 2087)))
-    .define("tokens", [], this.star(this.app("token").withInterval(decl.sourceInterval(2100, 2105))).withInterval(decl.sourceInterval(2100, 2106)))
-    .define("token", [], this.alt(this.app("caseName").withInterval(decl.sourceInterval(2118, 2126)), this.app("comment").withInterval(decl.sourceInterval(2129, 2136)), this.app("ident").withInterval(decl.sourceInterval(2139, 2144)), this.app("operator").withInterval(decl.sourceInterval(2147, 2155)), this.app("punctuation").withInterval(decl.sourceInterval(2158, 2169)), this.app("terminal").withInterval(decl.sourceInterval(2172, 2180)), this.app("any").withInterval(decl.sourceInterval(2183, 2186))).withInterval(decl.sourceInterval(2118, 2186)))
-    .define("operator", [], this.alt(this.terminal("<:").withInterval(decl.sourceInterval(2201, 2205)), this.terminal("=").withInterval(decl.sourceInterval(2208, 2211)), this.terminal(":=").withInterval(decl.sourceInterval(2214, 2218)), this.terminal("+=").withInterval(decl.sourceInterval(2221, 2225)), this.terminal("*").withInterval(decl.sourceInterval(2228, 2231)), this.terminal("+").withInterval(decl.sourceInterval(2234, 2237)), this.terminal("?").withInterval(decl.sourceInterval(2240, 2243)), this.terminal("~").withInterval(decl.sourceInterval(2246, 2249)), this.terminal("&").withInterval(decl.sourceInterval(2252, 2255))).withInterval(decl.sourceInterval(2201, 2255)))
-    .define("punctuation", [], this.alt(this.terminal("<").withInterval(decl.sourceInterval(2273, 2276)), this.terminal(">").withInterval(decl.sourceInterval(2279, 2282)), this.terminal(",").withInterval(decl.sourceInterval(2285, 2288)), this.terminal("--").withInterval(decl.sourceInterval(2291, 2295))).withInterval(decl.sourceInterval(2273, 2295)))
+    .define("Pred_not", [], this.seq(this.prim("~").withInterval(decl.sourceInterval(583, 586)), this.app("Modifier").withInterval(decl.sourceInterval(587, 595))).withInterval(decl.sourceInterval(583, 595)))
+    .define("Pred_lookahead", [], this.seq(this.prim("&").withInterval(decl.sourceInterval(610, 613)), this.app("Modifier").withInterval(decl.sourceInterval(614, 622))).withInterval(decl.sourceInterval(610, 622)))
+    .define("Pred", [], this.alt(this.app("Pred_not").withInterval(decl.sourceInterval(583, 595)), this.app("Pred_lookahead").withInterval(decl.sourceInterval(610, 622)), this.app("Modifier").withInterval(decl.sourceInterval(643, 651))).withInterval(decl.sourceInterval(583, 651)))
+    .define("Modifier_lex", [], this.seq(this.prim("#").withInterval(decl.sourceInterval(670, 673)), this.app("Base").withInterval(decl.sourceInterval(674, 678))).withInterval(decl.sourceInterval(670, 678)))
+    .define("Modifier_val", [], this.seq(this.prim("$").withInterval(decl.sourceInterval(693, 696)), this.app("Base").withInterval(decl.sourceInterval(697, 701))).withInterval(decl.sourceInterval(693, 701)))
+    .define("Modifier", [], this.alt(this.app("Modifier_lex").withInterval(decl.sourceInterval(670, 678)), this.app("Modifier_val").withInterval(decl.sourceInterval(693, 701)), this.app("Base").withInterval(decl.sourceInterval(716, 720))).withInterval(decl.sourceInterval(670, 720)))
+    .define("Base_application", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(735, 740)), this.opt(this.app("Params").withInterval(decl.sourceInterval(741, 747))).withInterval(decl.sourceInterval(741, 748)), this.not(this.alt(this.seq(this.opt(this.app("ruleDescr").withInterval(decl.sourceInterval(751, 760))).withInterval(decl.sourceInterval(751, 761)), this.prim("=").withInterval(decl.sourceInterval(762, 765))).withInterval(decl.sourceInterval(751, 765)), this.prim(":=").withInterval(decl.sourceInterval(768, 772)), this.prim("+=").withInterval(decl.sourceInterval(775, 779))).withInterval(decl.sourceInterval(751, 779))).withInterval(decl.sourceInterval(749, 780))).withInterval(decl.sourceInterval(735, 780)))
+    .define("Base_range", [], this.seq(this.app("Prim").withInterval(decl.sourceInterval(803, 807)), this.prim("..").withInterval(decl.sourceInterval(808, 812)), this.app("Prim").withInterval(decl.sourceInterval(813, 817))).withInterval(decl.sourceInterval(803, 817)))
+    .define("Base_prim", [], this.app("Prim").withInterval(decl.sourceInterval(865, 869)))
+    .define("Base_paren", [], this.seq(this.prim("(").withInterval(decl.sourceInterval(926, 929)), this.app("Alt").withInterval(decl.sourceInterval(930, 933)), this.prim(")").withInterval(decl.sourceInterval(934, 937))).withInterval(decl.sourceInterval(926, 937)))
+    .define("Base_arr", [], this.seq(this.prim("[").withInterval(decl.sourceInterval(988, 991)), this.app("Alt").withInterval(decl.sourceInterval(992, 995)), this.prim("]").withInterval(decl.sourceInterval(996, 999))).withInterval(decl.sourceInterval(988, 999)))
+    .define("Base_obj", [], this.seq(this.prim("{").withInterval(decl.sourceInterval(1048, 1051)), this.opt(this.prim("...").withInterval(decl.sourceInterval(1052, 1057))).withInterval(decl.sourceInterval(1052, 1058)), this.prim("}").withInterval(decl.sourceInterval(1059, 1062))).withInterval(decl.sourceInterval(1048, 1062)))
+    .define("Base_objWithProps", [], this.seq(this.prim("{").withInterval(decl.sourceInterval(1108, 1111)), this.app("Props").withInterval(decl.sourceInterval(1112, 1117)), this.opt(this.seq(this.prim(",").withInterval(decl.sourceInterval(1119, 1122)), this.prim("...").withInterval(decl.sourceInterval(1123, 1128))).withInterval(decl.sourceInterval(1119, 1128))).withInterval(decl.sourceInterval(1118, 1130)), this.prim("}").withInterval(decl.sourceInterval(1131, 1134))).withInterval(decl.sourceInterval(1108, 1134)))
+    .define("Base", [], this.alt(this.app("Base_application").withInterval(decl.sourceInterval(735, 780)), this.app("Base_range").withInterval(decl.sourceInterval(803, 817)), this.app("Base_prim").withInterval(decl.sourceInterval(865, 869)), this.app("Base_paren").withInterval(decl.sourceInterval(926, 937)), this.app("Base_arr").withInterval(decl.sourceInterval(988, 999)), this.app("Base_obj").withInterval(decl.sourceInterval(1048, 1062)), this.app("Base_objWithProps").withInterval(decl.sourceInterval(1108, 1134))).withInterval(decl.sourceInterval(735, 1170)))
+    .define("Prim", [], this.alt(this.app("keyword").withInterval(decl.sourceInterval(1185, 1192)), this.app("string").withInterval(decl.sourceInterval(1199, 1205)), this.app("number").withInterval(decl.sourceInterval(1212, 1218))).withInterval(decl.sourceInterval(1185, 1218)))
+    .define("Props", [], this.seq(this.app("Prop").withInterval(decl.sourceInterval(1234, 1238)), this.star(this.seq(this.prim(",").withInterval(decl.sourceInterval(1240, 1243)), this.app("Prop").withInterval(decl.sourceInterval(1244, 1248))).withInterval(decl.sourceInterval(1240, 1248))).withInterval(decl.sourceInterval(1239, 1250))).withInterval(decl.sourceInterval(1234, 1250)))
+    .define("Prop", [], this.seq(this.alt(this.app("name").withInterval(decl.sourceInterval(1266, 1270)), this.app("string").withInterval(decl.sourceInterval(1273, 1279))).withInterval(decl.sourceInterval(1266, 1279)), this.prim(":").withInterval(decl.sourceInterval(1281, 1284)), this.app("Alt").withInterval(decl.sourceInterval(1285, 1288))).withInterval(decl.sourceInterval(1265, 1288)))
+    .define("ruleDescr", [], this.seq(this.prim("(").withInterval(decl.sourceInterval(1330, 1333)), this.app("ruleDescrText").withInterval(decl.sourceInterval(1334, 1347)), this.prim(")").withInterval(decl.sourceInterval(1348, 1351))).withInterval(decl.sourceInterval(1330, 1351)), "a rule description")
+    .define("ruleDescrText", [], this.star(this.seq(this.not(this.prim(")").withInterval(decl.sourceInterval(1377, 1380))).withInterval(decl.sourceInterval(1376, 1380)), this.app("any").withInterval(decl.sourceInterval(1381, 1384))).withInterval(decl.sourceInterval(1376, 1384))).withInterval(decl.sourceInterval(1375, 1386)))
+    .define("caseName", [], this.seq(this.prim("--").withInterval(decl.sourceInterval(1405, 1409)), this.star(this.seq(this.not(this.prim("\n").withInterval(decl.sourceInterval(1412, 1416))).withInterval(decl.sourceInterval(1411, 1416)), this.app("space").withInterval(decl.sourceInterval(1417, 1422))).withInterval(decl.sourceInterval(1411, 1422))).withInterval(decl.sourceInterval(1410, 1424)), this.app("name").withInterval(decl.sourceInterval(1425, 1429)), this.star(this.seq(this.not(this.prim("\n").withInterval(decl.sourceInterval(1432, 1436))).withInterval(decl.sourceInterval(1431, 1436)), this.app("space").withInterval(decl.sourceInterval(1437, 1442))).withInterval(decl.sourceInterval(1431, 1442))).withInterval(decl.sourceInterval(1430, 1444)), this.alt(this.prim("\n").withInterval(decl.sourceInterval(1446, 1450)), this.la(this.prim("}").withInterval(decl.sourceInterval(1454, 1457))).withInterval(decl.sourceInterval(1453, 1457))).withInterval(decl.sourceInterval(1446, 1457))).withInterval(decl.sourceInterval(1405, 1458)))
+    .define("name", [], this.seq(this.app("nameFirst").withInterval(decl.sourceInterval(1483, 1492)), this.star(this.app("nameRest").withInterval(decl.sourceInterval(1493, 1501))).withInterval(decl.sourceInterval(1493, 1502))).withInterval(decl.sourceInterval(1483, 1502)), "a name")
+    .define("nameFirst", [], this.alt(this.prim("_").withInterval(decl.sourceInterval(1522, 1525)), this.app("letter").withInterval(decl.sourceInterval(1532, 1538))).withInterval(decl.sourceInterval(1522, 1538)))
+    .define("nameRest", [], this.alt(this.prim("_").withInterval(decl.sourceInterval(1557, 1560)), this.app("alnum").withInterval(decl.sourceInterval(1567, 1572))).withInterval(decl.sourceInterval(1557, 1572)))
+    .define("ident", [], this.seq(this.not(this.app("keyword").withInterval(decl.sourceInterval(1606, 1613))).withInterval(decl.sourceInterval(1605, 1613)), this.app("name").withInterval(decl.sourceInterval(1614, 1618))).withInterval(decl.sourceInterval(1605, 1618)), "an identifier")
+    .define("keyword_null", [], this.seq(this.prim("null").withInterval(decl.sourceInterval(1636, 1642)), this.not(this.app("nameRest").withInterval(decl.sourceInterval(1644, 1652))).withInterval(decl.sourceInterval(1643, 1652))).withInterval(decl.sourceInterval(1636, 1652)))
+    .define("keyword_true", [], this.seq(this.prim("true").withInterval(decl.sourceInterval(1669, 1675)), this.not(this.app("nameRest").withInterval(decl.sourceInterval(1677, 1685))).withInterval(decl.sourceInterval(1676, 1685))).withInterval(decl.sourceInterval(1669, 1685)))
+    .define("keyword_false", [], this.seq(this.prim("false").withInterval(decl.sourceInterval(1702, 1709)), this.not(this.app("nameRest").withInterval(decl.sourceInterval(1711, 1719))).withInterval(decl.sourceInterval(1710, 1719))).withInterval(decl.sourceInterval(1702, 1719)))
+    .define("keyword", [], this.alt(this.app("keyword_null").withInterval(decl.sourceInterval(1636, 1652)), this.app("keyword_true").withInterval(decl.sourceInterval(1669, 1685)), this.app("keyword_false").withInterval(decl.sourceInterval(1702, 1719))).withInterval(decl.sourceInterval(1636, 1729)))
+    .define("string", [], this.seq(this.prim("\"").withInterval(decl.sourceInterval(1746, 1750)), this.star(this.app("strChar").withInterval(decl.sourceInterval(1751, 1758))).withInterval(decl.sourceInterval(1751, 1759)), this.prim("\"").withInterval(decl.sourceInterval(1760, 1764))).withInterval(decl.sourceInterval(1746, 1764)))
+    .define("strChar", [], this.alt(this.app("escapeChar").withInterval(decl.sourceInterval(1782, 1792)), this.seq(this.not(this.prim("\\").withInterval(decl.sourceInterval(1800, 1804))).withInterval(decl.sourceInterval(1799, 1804)), this.not(this.prim("\"").withInterval(decl.sourceInterval(1806, 1810))).withInterval(decl.sourceInterval(1805, 1810)), this.not(this.prim("\n").withInterval(decl.sourceInterval(1812, 1816))).withInterval(decl.sourceInterval(1811, 1816)), this.app("any").withInterval(decl.sourceInterval(1817, 1820))).withInterval(decl.sourceInterval(1799, 1820))).withInterval(decl.sourceInterval(1782, 1820)))
+    .define("escapeChar_backslash", [], this.prim("\\\\").withInterval(decl.sourceInterval(1863, 1869)))
+    .define("escapeChar_doubleQuote", [], this.prim("\\\"").withInterval(decl.sourceInterval(1925, 1931)))
+    .define("escapeChar_singleQuote", [], this.prim("\\'").withInterval(decl.sourceInterval(1989, 1995)))
+    .define("escapeChar_backspace", [], this.prim("\\b").withInterval(decl.sourceInterval(2053, 2058)))
+    .define("escapeChar_lineFeed", [], this.prim("\\n").withInterval(decl.sourceInterval(2115, 2120)))
+    .define("escapeChar_carriageReturn", [], this.prim("\\r").withInterval(decl.sourceInterval(2176, 2181)))
+    .define("escapeChar_tab", [], this.prim("\\t").withInterval(decl.sourceInterval(2243, 2248)))
+    .define("escapeChar_unicodeEscape", [], this.seq(this.prim("\\u").withInterval(decl.sourceInterval(2299, 2304)), this.app("hexDigit").withInterval(decl.sourceInterval(2305, 2313)), this.app("hexDigit").withInterval(decl.sourceInterval(2314, 2322)), this.app("hexDigit").withInterval(decl.sourceInterval(2323, 2331)), this.app("hexDigit").withInterval(decl.sourceInterval(2332, 2340))).withInterval(decl.sourceInterval(2299, 2340)))
+    .define("escapeChar_hexEscape", [], this.seq(this.prim("\\x").withInterval(decl.sourceInterval(2365, 2370)), this.app("hexDigit").withInterval(decl.sourceInterval(2371, 2379)), this.app("hexDigit").withInterval(decl.sourceInterval(2380, 2388))).withInterval(decl.sourceInterval(2365, 2388)))
+    .define("escapeChar", [], this.alt(this.app("escapeChar_backslash").withInterval(decl.sourceInterval(1863, 1869)), this.app("escapeChar_doubleQuote").withInterval(decl.sourceInterval(1925, 1931)), this.app("escapeChar_singleQuote").withInterval(decl.sourceInterval(1989, 1995)), this.app("escapeChar_backspace").withInterval(decl.sourceInterval(2053, 2058)), this.app("escapeChar_lineFeed").withInterval(decl.sourceInterval(2115, 2120)), this.app("escapeChar_carriageReturn").withInterval(decl.sourceInterval(2176, 2181)), this.app("escapeChar_tab").withInterval(decl.sourceInterval(2243, 2248)), this.app("escapeChar_unicodeEscape").withInterval(decl.sourceInterval(2299, 2340)), this.app("escapeChar_hexEscape").withInterval(decl.sourceInterval(2365, 2388))).withInterval(decl.sourceInterval(1863, 2420)), "an escape sequence")
+    .define("number", [], this.seq(this.opt(this.prim("-").withInterval(decl.sourceInterval(2449, 2452))).withInterval(decl.sourceInterval(2449, 2453)), this.plus(this.app("digit").withInterval(decl.sourceInterval(2454, 2459))).withInterval(decl.sourceInterval(2454, 2460))).withInterval(decl.sourceInterval(2449, 2460)), "a number")
+    .extend("space", [], this.app("comment").withInterval(decl.sourceInterval(2476, 2483)))
+    .define("comment_singleLine", [], this.seq(this.prim("//").withInterval(decl.sourceInterval(2501, 2505)), this.star(this.seq(this.not(this.prim("\n").withInterval(decl.sourceInterval(2508, 2512))).withInterval(decl.sourceInterval(2507, 2512)), this.app("any").withInterval(decl.sourceInterval(2513, 2516))).withInterval(decl.sourceInterval(2507, 2516))).withInterval(decl.sourceInterval(2506, 2518)), this.prim("\n").withInterval(decl.sourceInterval(2519, 2523))).withInterval(decl.sourceInterval(2501, 2523)))
+    .define("comment_multiLine", [], this.seq(this.prim("/*").withInterval(decl.sourceInterval(2545, 2549)), this.star(this.seq(this.not(this.prim("*/").withInterval(decl.sourceInterval(2552, 2556))).withInterval(decl.sourceInterval(2551, 2556)), this.app("any").withInterval(decl.sourceInterval(2557, 2560))).withInterval(decl.sourceInterval(2551, 2560))).withInterval(decl.sourceInterval(2550, 2562)), this.prim("*/").withInterval(decl.sourceInterval(2563, 2567))).withInterval(decl.sourceInterval(2545, 2567)))
+    .define("comment", [], this.alt(this.app("comment_singleLine").withInterval(decl.sourceInterval(2501, 2523)), this.app("comment_multiLine").withInterval(decl.sourceInterval(2545, 2567))).withInterval(decl.sourceInterval(2501, 2581)))
+    .define("tokens", [], this.star(this.app("token").withInterval(decl.sourceInterval(2594, 2599))).withInterval(decl.sourceInterval(2594, 2600)))
+    .define("token", [], this.alt(this.app("caseName").withInterval(decl.sourceInterval(2612, 2620)), this.app("comment").withInterval(decl.sourceInterval(2623, 2630)), this.app("ident").withInterval(decl.sourceInterval(2633, 2638)), this.app("keyword").withInterval(decl.sourceInterval(2641, 2648)), this.app("number").withInterval(decl.sourceInterval(2651, 2657)), this.app("operator").withInterval(decl.sourceInterval(2660, 2668)), this.app("punctuation").withInterval(decl.sourceInterval(2671, 2682)), this.app("string").withInterval(decl.sourceInterval(2685, 2691)), this.app("any").withInterval(decl.sourceInterval(2694, 2697))).withInterval(decl.sourceInterval(2612, 2697)))
+    .define("operator", [], this.alt(this.prim("<:").withInterval(decl.sourceInterval(2712, 2716)), this.prim("=").withInterval(decl.sourceInterval(2719, 2722)), this.prim(":=").withInterval(decl.sourceInterval(2725, 2729)), this.prim("+=").withInterval(decl.sourceInterval(2732, 2736)), this.prim("*").withInterval(decl.sourceInterval(2739, 2742)), this.prim("+").withInterval(decl.sourceInterval(2745, 2748)), this.prim("?").withInterval(decl.sourceInterval(2751, 2754)), this.prim("~").withInterval(decl.sourceInterval(2757, 2760)), this.prim("&").withInterval(decl.sourceInterval(2763, 2766))).withInterval(decl.sourceInterval(2712, 2766)))
+    .define("punctuation", [], this.alt(this.prim("<").withInterval(decl.sourceInterval(2784, 2787)), this.prim(">").withInterval(decl.sourceInterval(2790, 2793)), this.prim(",").withInterval(decl.sourceInterval(2796, 2799)), this.prim("--").withInterval(decl.sourceInterval(2802, 2806))).withInterval(decl.sourceInterval(2784, 2806)))
     .build();
 });
 
@@ -2858,10 +2867,10 @@ module.exports = ohm.makeRecipe(function() {
   return decl
     .define("AttributeSignature", [], this.app("name").withInterval(decl.sourceInterval(54, 58)))
     .define("OperationSignature", [], this.seq(this.app("name").withInterval(decl.sourceInterval(87, 91)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(92, 99))).withInterval(decl.sourceInterval(92, 100))).withInterval(decl.sourceInterval(87, 100)))
-    .define("Formals", [], this.seq(this.terminal("(").withInterval(decl.sourceInterval(118, 121)), this.app("ListOf", [this.app("name").withInterval(decl.sourceInterval(129, 133)), this.terminal(",").withInterval(decl.sourceInterval(135, 138))]).withInterval(decl.sourceInterval(122, 139)), this.terminal(")").withInterval(decl.sourceInterval(140, 143))).withInterval(decl.sourceInterval(118, 143)))
+    .define("Formals", [], this.seq(this.prim("(").withInterval(decl.sourceInterval(118, 121)), this.app("ListOf", [this.app("name").withInterval(decl.sourceInterval(129, 133)), this.prim(",").withInterval(decl.sourceInterval(135, 138))]).withInterval(decl.sourceInterval(122, 139)), this.prim(")").withInterval(decl.sourceInterval(140, 143))).withInterval(decl.sourceInterval(118, 143)))
     .define("name", [], this.seq(this.app("nameFirst").withInterval(decl.sourceInterval(168, 177)), this.star(this.app("nameRest").withInterval(decl.sourceInterval(178, 186))).withInterval(decl.sourceInterval(178, 187))).withInterval(decl.sourceInterval(168, 187)), "a name")
-    .define("nameFirst", [], this.alt(this.terminal("_").withInterval(decl.sourceInterval(207, 210)), this.app("letter").withInterval(decl.sourceInterval(217, 223))).withInterval(decl.sourceInterval(207, 223)))
-    .define("nameRest", [], this.alt(this.terminal("_").withInterval(decl.sourceInterval(242, 245)), this.app("alnum").withInterval(decl.sourceInterval(252, 257))).withInterval(decl.sourceInterval(242, 257)))
+    .define("nameFirst", [], this.alt(this.prim("_").withInterval(decl.sourceInterval(207, 210)), this.app("letter").withInterval(decl.sourceInterval(217, 223))).withInterval(decl.sourceInterval(207, 223)))
+    .define("nameRest", [], this.alt(this.prim("_").withInterval(decl.sourceInterval(242, 245)), this.app("alnum").withInterval(decl.sourceInterval(252, 257))).withInterval(decl.sourceInterval(242, 257)))
     .build();
 });
 
@@ -3018,7 +3027,7 @@ module.exports = {
   semantics: semanticsForToAST
 };
 
-},{"../src/Grammar":38,"../src/MatchResult":42,"../src/pexprs":67,"util-extend":35}],15:[function(require,module,exports){
+},{"../src/Grammar":38,"../src/MatchResult":42,"../src/pexprs":69,"util-extend":35}],15:[function(require,module,exports){
 'use strict';
 
 module.exports = require('./is-implemented')() ? Symbol : require('./polyfill');
@@ -3432,8 +3441,8 @@ Builder.prototype = {
     return new GrammarDecl(name);
   },
 
-  terminal: function(x) {
-    return new pexprs.Terminal(x);
+  prim: function(x) {
+    return new pexprs.Prim(x);
   },
 
   range: function(from, to) {
@@ -3494,6 +3503,22 @@ Builder.prototype = {
     return new pexprs.Lex(expr);
   },
 
+  val: function(expr) {
+    return new pexprs.Value(expr);
+  },
+
+  arr: function(expr) {
+    return new pexprs.Arr(expr);
+  },
+
+  str: function(expr) {
+    return new pexprs.Str(expr);
+  },
+
+  obj: function(properties, isLenient) {
+    return new pexprs.Obj(properties, !!isLenient);
+  },
+
   app: function(ruleName, optParams) {
     return new pexprs.Apply(ruleName, optParams);
   }
@@ -3505,7 +3530,7 @@ Builder.prototype = {
 
 module.exports = Builder;
 
-},{"./GrammarDecl":39,"./pexprs":67}],37:[function(require,module,exports){
+},{"./GrammarDecl":39,"./pexprs":69}],37:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -3639,6 +3664,7 @@ function Grammar(
     }
     this.defaultStartRule = optDefaultStartRule;
   }
+  this.constructors = this.ctors = this.createConstructors();
 }
 
 var ohmGrammar;
@@ -3651,25 +3677,66 @@ Grammar.initApplicationParser = function(grammar, builderFn) {
 };
 
 Grammar.prototype = {
+  construct: function(ruleName, children) {
+    var body = this.ruleBodies[ruleName];
+    if (!body) {
+      throw errors.undeclaredRule(ruleName, this.name);
+    }
+
+    var ans = this._constructByMatching(ruleName, children);
+    if (!ans) {
+      throw errors.invalidConstructorCall(this, ruleName, children);
+    }
+    return ans;
+  },
+
+  // Try to match `ctorArgs` with the body of the rule given by `ruleName`.
+  // Return the resulting CST node if it succeeds, otherwise return null.
+  _constructByMatching: function(ruleName, ctorArgs) {
+    var state = this._match(ctorArgs, {startApplication: ruleName, matchNodes: true});
+    if (state.bindings.length > 0) {
+      return state.bindings[0];
+    }
+    return null;
+  },
+
+  createConstructors: function() {
+    var self = this;
+    var constructors = {};
+
+    function makeConstructor(ruleName) {
+      return function(/* val1, val2, ... */) {
+        return self.construct(ruleName, Array.prototype.slice.call(arguments));
+      };
+    }
+
+    for (var ruleName in this.ruleBodies) {
+      // We want *all* properties, not just own properties, because of
+      // supergrammars.
+      constructors[ruleName] = makeConstructor(ruleName);
+    }
+    return constructors;
+  },
+
   // Return true if the grammar is a built-in grammar, otherwise false.
   // NOTE: This might give an unexpected result if called before BuiltInRules is defined!
   isBuiltIn: function() {
     return this === Grammar.ProtoBuiltInRules || this === Grammar.BuiltInRules;
   },
 
-  _match: function(input, opts) {
-    var state = new State(this, input, opts);
+  _match: function(values, opts) {
+    var state = new State(this, values, opts);
     state.evalFromStart();
     return state;
   },
 
-  match: function(input, optStartApplication) {
-    var state = this._match(input, {startApplication: optStartApplication});
+  match: function(obj, optStartApplication) {
+    var state = this._match([obj], {startApplication: optStartApplication});
     return MatchResult.newFor(state);
   },
 
-  trace: function(input, optStartApplication) {
-    var state = this._match(input, {startApplication: optStartApplication, trace: true});
+  trace: function(obj, optStartApplication) {
+    var state = this._match([obj], {startApplication: optStartApplication, trace: true});
 
     // The trace node for the start rule is always the last entry. If it is a syntactic rule,
     // the first entry is for an application of 'spaces'.
@@ -3924,7 +3991,7 @@ Grammar.ProtoBuiltInRules = new Grammar(
 
 module.exports = Grammar;
 
-},{"./MatchResult":42,"./Semantics":45,"./State":46,"./common":48,"./errors":49,"./pexprs":67}],39:[function(require,module,exports){
+},{"./MatchResult":42,"./Semantics":45,"./State":46,"./common":48,"./errors":49,"./pexprs":69}],39:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -4014,7 +4081,7 @@ GrammarDecl.prototype.withDefaultStartRule = function(ruleName) {
 };
 
 GrammarDecl.prototype.withSource = function(source) {
-  this.interval = new InputStream(source).interval(0, source.length);
+  this.interval = InputStream.newFor(source).interval(0, source.length);
   return this;
 };
 
@@ -4056,6 +4123,16 @@ GrammarDecl.prototype.build = function() {
         body.assertIteratedExprsAreNotNullable(grammar, ruleName);
       } catch (e) {
         grammarErrors.push(e);
+      }
+      // For now, only check the bodies of unparameterized rules, because the checks can't deal
+      // properly with parameters that don't have a concrete value.
+      // TODO: Fix this.
+      if (grammar.ruleFormals[ruleName].length === 0) {
+        try {
+          body.assertValuesAndStringsAreNotMixed(grammar, ruleName);
+        } catch (e) {
+          grammarErrors.push(e);
+        }
       }
     });
   }
@@ -4111,41 +4188,51 @@ GrammarDecl.prototype.extend = function(name, formals, fragment) {
 
 module.exports = GrammarDecl;
 
-},{"./Grammar":38,"./InputStream":40,"./common":48,"./errors":49,"./pexprs":67}],40:[function(require,module,exports){
+},{"./Grammar":38,"./InputStream":40,"./common":48,"./errors":49,"./pexprs":69}],40:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
 // Imports
 // --------------------------------------------------------------------
 
+var inherits = require('inherits');
+
+var common = require('./common');
 var Interval = require('./Interval');
 
 // --------------------------------------------------------------------
 // Private stuff
 // --------------------------------------------------------------------
 
-function InputStream(source) {
-  this.source = source;
-  this.pos = 0;
-  this.posInfos = [];
+function InputStream() {
+  throw new Error('InputStream cannot be instantiated -- it\'s abstract');
 }
 
+InputStream.newFor = function(arrOrStr) {
+  return Array.isArray(arrOrStr) ? new ListInputStream(arrOrStr) : new StringInputStream(arrOrStr);
+};
+
 InputStream.prototype = {
+  init: function(source) {
+    this.source = source;
+    this.pos = 0;
+    this.posInfos = [];
+  },
+
   atEnd: function() {
     return this.pos === this.source.length;
   },
 
   next: function() {
-    return this.source[this.pos++];
+    if (this.atEnd()) {
+      return common.fail;
+    } else {
+      return this.source[this.pos++];
+    }
   },
 
-  matchString: function(s) {
-    for (var idx = 0; idx < s.length; idx++) {
-      if (this.next() !== s[idx]) {
-        return false;
-      }
-    }
-    return true;
+  matchExactly: function(x) {
+    return this.next() === x ? true : common.fail;
   },
 
   sourceSlice: function(startIdx, endIdx) {
@@ -4157,13 +4244,36 @@ InputStream.prototype = {
   }
 };
 
+function StringInputStream(source) {
+  this.init(source);
+}
+inherits(StringInputStream, InputStream);
+
+StringInputStream.prototype.matchString = function(s) {
+  for (var idx = 0; idx < s.length; idx++) {
+    if (this.matchExactly(s[idx]) === common.fail) {
+      return common.fail;
+    }
+  }
+  return true;
+};
+
+function ListInputStream(source) {
+  this.init(source);
+}
+inherits(ListInputStream, InputStream);
+
+ListInputStream.prototype.matchString = function(s) {
+  return this.matchExactly(s);
+};
+
 // --------------------------------------------------------------------
 // Exports
 // --------------------------------------------------------------------
 
 module.exports = InputStream;
 
-},{"./Interval":41}],41:[function(require,module,exports){
+},{"./Interval":41,"./common":48,"inherits":33}],41:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -4296,7 +4406,7 @@ Object.defineProperties(Interval.prototype, {
 module.exports = Interval;
 
 
-},{"./common":48,"./errors":49,"./util":68}],42:[function(require,module,exports){
+},{"./common":48,"./errors":49,"./util":70}],42:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -4505,7 +4615,7 @@ MatchFailure.prototype.getInterval = function() {
 
 module.exports = MatchResult;
 
-},{"./Interval":41,"./common":48,"./nodes":51,"./util":68,"inherits":33}],43:[function(require,module,exports){
+},{"./Interval":41,"./common":48,"./nodes":51,"./util":70,"inherits":33}],43:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -4850,71 +4960,6 @@ Semantics.prototype.checkActionDicts = function() {
   }
 };
 
-Semantics.prototype.toRecipe = function(semanticsOnly) {
-  function hasSuperSemantics(s) {
-    return s.super !== Semantics.BuiltInSemantics._getSemantics();
-  }
-
-  var str = '(function(g) {\n';
-  if (hasSuperSemantics(this)) {
-    str += '  var semantics = ' + this.super.toRecipe(true) + '(g';
-
-    var superSemanticsGrammar = this.super.grammar;
-    var relatedGrammar = this.grammar;
-    while (relatedGrammar !== superSemanticsGrammar) {
-      str += '.superGrammar';
-      relatedGrammar = relatedGrammar.superGrammar;
-    }
-
-    str += ');\n';
-    str += '  return g.extendSemantics(semantics)';
-  } else {
-    str += '  return g.semantics()';
-  }
-  ['Operation', 'Attribute'].forEach(function(type) {
-    var semanticOperations = this[type.toLowerCase() + 's'];
-    Object.keys(semanticOperations).forEach(function(name) {
-      var signature = name;
-      if (semanticOperations[name].formals.length > 0) {
-        signature += '(' + semanticOperations[name].formals.join(', ') + ')';
-      }
-
-      var method;
-      if (hasSuperSemantics(this) && this.super[type.toLowerCase() + 's'][name]) {
-        method = 'extend' + type;
-      } else {
-        method = 'add' + type;
-      }
-      str += '\n    .' + method + '(' + JSON.stringify(signature) + ', {';
-
-      var actions = semanticOperations[name].actionDict;
-      var srcArray = [];
-      Object.keys(actions).forEach(function(actionName) {
-        if (semanticOperations[name].builtInDefault !== actions[actionName]) {
-          srcArray.push('\n      ' + JSON.stringify(actionName) + ': ' +
-            actions[actionName].toString());
-        }
-      });
-      str += srcArray.join(',');
-
-      str += '\n    })';
-    }, this);
-  }, this);
-  str += ';\n  })';
-
-  if (!semanticsOnly) {
-    str =
-      '(function() {\n' +
-      '  var buildGrammar = ' + this.grammar.toRecipe() +
-      '  var grammar = buildGrammar.call(this);\n' +
-      '  var semantics = ' + str + '(grammar);\n' +
-      '  return semantics;\n' +
-      '});\n';
-  }
-
-  return str;
-};
-
 var prototypeGrammar;
 var prototypeGrammarSemantics;
 
@@ -4965,36 +5010,6 @@ function parseSignature(signature, type) {
   return prototypeGrammarSemantics(r).parse();
 }
 
-function newDefaultAction(type, name, doIt) {
-  return function(children) {
-    var self = this;
-    var thisThing = this._semantics.operations[name] || this._semantics.attributes[name];
-    var args = thisThing.formals.map(function(formal) {
-      return self.args[formal];
-    });
-
-    if (this.isIteration()) {
-      // This CST node corresponds to an iteration expression in the grammar (*, +, or ?). The
-      // default behavior is to map this operation or attribute over all of its child nodes.
-      return children.map(function(child) { return doIt.apply(child, args); });
-    }
-
-    // This CST node corresponds to a non-terminal in the grammar (e.g., AddExpr). The fact that
-    // we got here means that this action dictionary doesn't have an action for this particular
-    // non-terminal or a generic `_nonterminal` action.
-    if (children.length === 1) {
-      // As a convenience, if this node only has one child, we just return the result of
-      // applying this operation / attribute to the child node.
-      return doIt.apply(children[0], args);
-    } else {
-      // Otherwise, we throw an exception to let the programmer know that we don't know what
-      // to do with this node.
-      throw new Error(
-          'Missing semantic action for ' + this.ctorName + ' in ' + name + ' ' + type);
-    }
-  };
-}
-
 Semantics.prototype.addOperationOrAttribute = function(type, signature, actionDict) {
   var typePlural = type + 's';
 
@@ -5008,8 +5023,35 @@ Semantics.prototype.addOperationOrAttribute = function(type, signature, actionDi
 
   // Create the action dictionary for this operation / attribute that contains a `_default` action
   // which defines the default behavior of iteration, terminal, and non-terminal nodes...
-  var builtInDefault = newDefaultAction(type, name, doIt);
-  var realActionDict = {_default: builtInDefault};
+  var realActionDict = {
+    _default: function(children) {
+      var self = this;
+      var thisThing = this._semantics[typePlural][name];
+      var args = thisThing.formals.map(function(formal) {
+        return self.args[formal];
+      });
+
+      if (this.isIteration()) {
+        // This CST node corresponds to an iteration expression in the grammar (*, +, or ?). The
+        // default behavior is to map this operation or attribute over all of its child nodes.
+        return children.map(function(child) { return doIt.apply(child, args); });
+      }
+
+      // This CST node corresponds to a non-terminal in the grammar (e.g., AddExpr). The fact that
+      // we got here means that this action dictionary doesn't have an action for this particular
+      // non-terminal or a generic `_nonterminal` action.
+      if (children.length === 1) {
+        // As a convenience, if this node only has one child, we just return the result of
+        // applying this operation / attribute to the child node.
+        return doIt.apply(children[0], args);
+      } else {
+        // Otherwise, we throw an exception to let the programmer know that we don't know what
+        // to do with this node.
+        throw new Error(
+            'Missing semantic action for ' + this.ctorName + ' in ' + name + ' ' + type);
+      }
+    }
+  };
   // ... and add in the actions supplied by the programmer, which may override some or all of the
   // default ones.
   Object.keys(actionDict).forEach(function(name) {
@@ -5017,8 +5059,8 @@ Semantics.prototype.addOperationOrAttribute = function(type, signature, actionDi
   });
 
   var entry = type === 'operation' ?
-      new Operation(name, formals, realActionDict, builtInDefault) :
-      new Attribute(name, realActionDict, builtInDefault);
+      new Operation(name, formals, realActionDict) :
+      new Attribute(name, realActionDict);
 
   // The following check is not strictly necessary (it will happen later anyway) but it's better to
   // catch errors early.
@@ -5175,18 +5217,6 @@ Semantics.createSemantics = function(grammar, optSuperSemantics) {
     }
     return action.actionDict;
   };
-  proxy.getOperationNames = function() {
-    return Object.keys(s.operations);
-  };
-  proxy.getAttributeNames = function() {
-    return Object.keys(s.attributes);
-  };
-  proxy.getGrammar = function() {
-    return s.grammar;
-  };
-  proxy.toRecipe = function(semanticsOnly) {
-    return s.toRecipe(semanticsOnly);
-  };
 
   // Make the proxy's toString() work.
   proxy.toString = s.toString.bind(s);
@@ -5226,11 +5256,10 @@ Semantics.initBuiltInSemantics = function(builtInRules) {
 // recursively walking the CST, and at each node, invoking the matching semantic action from
 // `actionDict`. See `Operation.prototype.execute` for details of how a CST node's matching semantic
 // action is found.
-function Operation(name, formals, actionDict, builtInDefault) {
+function Operation(name, formals, actionDict) {
   this.name = name;
   this.formals = formals;
   this.actionDict = actionDict;
-  this.builtInDefault = builtInDefault;
 }
 
 Operation.prototype.typeName = 'operation';
@@ -5279,11 +5308,10 @@ Operation.prototype.doAction = function(semantics, nodeWrapper, actionFn, optPas
 
 // Attributes are Operations whose results are memoized. This means that, for any given semantics,
 // the semantic action for a CST node will be invoked no more than once.
-function Attribute(name, actionDict, builtInDefault) {
+function Attribute(name, actionDict) {
   this.name = name;
   this.formals = [];
   this.actionDict = actionDict;
-  this.builtInDefault = builtInDefault;
 }
 inherits(Attribute, Operation);
 
@@ -5312,7 +5340,6 @@ module.exports = Semantics;
 // Imports
 // --------------------------------------------------------------------
 
-var InputStream = require('./InputStream');
 var PosInfo = require('./PosInfo');
 var Trace = require('./Trace');
 var pexprs = require('./pexprs');
@@ -5329,7 +5356,7 @@ var applySpaces = new pexprs.Apply('spaces');
 function State(grammar, input, opts) {
   this.grammar = grammar;
   this.startExpr = this._getStartExpr(grammar, opts.startApplication);
-  this.inputStream = new InputStream(input);
+  this.origInputStream = this.startExpr.newInputStreamFor(input, this.grammar);
   this.tracingEnabled = opts.trace || false;
   this.matchNodes = opts.matchNodes || false;
   this.init(RM_RIGHTMOST_FAILURE_POSITION);
@@ -5337,8 +5364,12 @@ function State(grammar, input, opts) {
 
 State.prototype = {
   init: function(recordingMode) {
-    this.posInfos = [];
     this.bindings = [];
+
+    this.inputStreamStack = [];
+    this.posInfosStack = [];
+    this.pushInputStream(this.origInputStream);
+
     this.applicationStack = [];
     this.inLexifiedContextStack = [false];
 
@@ -5428,6 +5459,18 @@ State.prototype = {
     while (this.bindings.length > newLength) {
       this.bindings.pop();
     }
+  },
+
+  pushInputStream: function(inputStream) {
+    this.inputStreamStack.push(this.inputStream);
+    this.posInfosStack.push(this.posInfos);
+    this.inputStream = inputStream;
+    this.posInfos = [];
+  },
+
+  popInputStream: function() {
+    this.inputStream = this.inputStreamStack.pop();
+    this.posInfos = this.posInfosStack.pop();
   },
 
   getCurrentPosInfo: function() {
@@ -5641,7 +5684,7 @@ State.prototype = {
 
 module.exports = State;
 
-},{"./InputStream":40,"./PosInfo":44,"./Trace":47,"./pexprs":67}],47:[function(require,module,exports){
+},{"./PosInfo":44,"./Trace":47,"./pexprs":69}],47:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -5914,6 +5957,8 @@ exports.copyWithoutDuplicates = function(array) {
   return noDuplicates;
 };
 
+exports.fail = {};
+
 exports.isSyntactic = function(ruleName) {
   var firstChar = ruleName[0];
   return firstChar === firstChar.toUpperCase();
@@ -6140,6 +6185,13 @@ function applicationOfSyntacticRuleFromLexicalContext(ruleName, applyExpr) {
       applyExpr.interval);
 }
 
+function exprMixesValueAndStringExpressions(expr, optRuleName) {
+  // TODO: Improve the reporting here.
+  var desc =
+      (optRuleName ? 'Rule ' + optRuleName : 'Expression') + ' mixes value and string expressions';
+  return createError(desc, expr.interval);
+}
+
 // ----------------- Kleene operators -----------------
 
 function kleeneExprHasNullableOperand(kleeneExpr) {
@@ -6192,6 +6244,7 @@ module.exports = {
   duplicateParameterNames: duplicateParameterNames,
   duplicatePropertyNames: duplicatePropertyNames,
   duplicateRuleDeclaration: duplicateRuleDeclaration,
+  exprMixesValueAndStringExpressions: exprMixesValueAndStringExpressions,
   inconsistentArity: inconsistentArity,
   intervalSourcesDontMatch: intervalSourcesDontMatch,
   invalidConstructorCall: invalidConstructorCall,
@@ -6399,8 +6452,11 @@ function buildGrammar(match, namespace, optOhmGrammarForTesting) {
       return builder.la(x.visit()).withInterval(this.interval);
     },
 
-    Lex_lex: function(_, x) {
+    Modifier_lex: function(_, x) {
       return builder.lex(x.visit()).withInterval(this.interval);
+    },
+    Modifier_val: function(_, x) {
+      return builder.val(x.visit()).withInterval(this.interval);
     },
 
     Base_application: function(rule, ps) {
@@ -6409,11 +6465,28 @@ function buildGrammar(match, namespace, optOhmGrammarForTesting) {
     Base_range: function(from, _, to) {
       return builder.range(from.visit(), to.visit()).withInterval(this.interval);
     },
-    Base_terminal: function(expr) {
-      return builder.terminal(expr.visit()).withInterval(this.interval);
+    Base_prim: function(expr) {
+      return builder.prim(expr.visit()).withInterval(this.interval);
     },
     Base_paren: function(open, x, close) {
       return x.visit();
+    },
+    Base_arr: function(open, x, close) {
+      return builder.arr(x.visit()).withInterval(this.interval);
+    },
+    Base_obj: function(open, lenient, close) {
+      return builder.obj([], lenient.visit()[0]);
+    },
+
+    Base_objWithProps: function(open, ps, _, lenient, close) {
+      return builder.obj(ps.visit(), lenient.visit()[0]).withInterval(this.interval);
+    },
+
+    Props: function(p, _, ps) {
+      return [p.visit()].concat(ps.visit());
+    },
+    Prop: function(n, _, p) {
+      return {name: n.visit(), pattern: p.visit()};
     },
 
     ruleDescr: function(open, t, close) {
@@ -6433,16 +6506,30 @@ function buildGrammar(match, namespace, optOhmGrammarForTesting) {
     nameFirst: function(expr) {},
     nameRest: function(expr) {},
 
-    terminal: function(open, cs, close) {
+    keyword_null: function(_) {
+      return null;
+    },
+    keyword_true: function(_) {
+      return true;
+    },
+    keyword_false: function(_) {
+      return false;
+    },
+
+    string: function(open, cs, close) {
       return cs.visit().map(function(c) { return common.unescapeChar(c); }).join('');
     },
 
-    terminalChar: function(_) {
+    strChar: function(_) {
       return this.interval.contents;
     },
 
     escapeChar: function(_) {
       return this.interval.contents;
+    },
+
+    number: function(_, digits) {
+      return parseInt(this.interval.contents);
     },
 
     NonemptyListOf: function(x, _, xs) {
@@ -6582,7 +6669,7 @@ Semantics.initPrototypeParser(operationsAndAttributesGrammar);  // requires Buil
 module.exports.ohmGrammar = ohmGrammar = require('../dist/ohm-grammar');
 Grammar.initApplicationParser(ohmGrammar, buildGrammar);
 
-},{"../dist/built-in-rules":10,"../dist/ohm-grammar":11,"../dist/operations-and-attributes":12,"../extras":13,"./Builder":36,"./Grammar":38,"./Namespace":43,"./Semantics":45,"./common":48,"./errors":49,"./pexprs":67,"./util":68,"is-buffer":34}],51:[function(require,module,exports){
+},{"../dist/built-in-rules":10,"../dist/ohm-grammar":11,"../dist/operations-and-attributes":12,"../extras":13,"./Builder":36,"./Grammar":38,"./Namespace":43,"./Semantics":45,"./common":48,"./errors":49,"./pexprs":69,"./util":70,"is-buffer":34}],51:[function(require,module,exports){
 'use strict';
 
 var inherits = require('inherits');
@@ -6776,7 +6863,7 @@ pexprs.PExpr.prototype.allowsSkippingPrecedingSpace = common.abstract;
 pexprs.any.allowsSkippingPrecedingSpace =
 pexprs.end.allowsSkippingPrecedingSpace =
 pexprs.Apply.prototype.allowsSkippingPrecedingSpace =
-pexprs.Terminal.prototype.allowsSkippingPrecedingSpace =
+pexprs.Prim.prototype.allowsSkippingPrecedingSpace =
 pexprs.Range.prototype.allowsSkippingPrecedingSpace =
 pexprs.UnicodeChar.prototype.allowsSkippingPrecedingSpace = function() {
   return true;
@@ -6787,16 +6874,19 @@ pexprs.UnicodeChar.prototype.allowsSkippingPrecedingSpace = function() {
   don't operate on string input streams (e.g. Obj and Arr).
 */
 pexprs.Alt.prototype.allowsSkippingPrecedingSpace =
+pexprs.Arr.prototype.allowsSkippingPrecedingSpace =
 pexprs.Iter.prototype.allowsSkippingPrecedingSpace =
 pexprs.Lex.prototype.allowsSkippingPrecedingSpace =
 pexprs.Lookahead.prototype.allowsSkippingPrecedingSpace =
 pexprs.Not.prototype.allowsSkippingPrecedingSpace =
+pexprs.Obj.prototype.allowsSkippingPrecedingSpace =
 pexprs.Param.prototype.allowsSkippingPrecedingSpace =
-pexprs.Seq.prototype.allowsSkippingPrecedingSpace = function() {
+pexprs.Seq.prototype.allowsSkippingPrecedingSpace =
+pexprs.Value.prototype.allowsSkippingPrecedingSpace = function() {
   return false;
 };
 
-},{"./common":48,"./pexprs":67}],53:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],53:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -6822,7 +6912,7 @@ pexprs.PExpr.prototype._assertAllApplicationsAreValid = common.abstract;
 
 pexprs.any._assertAllApplicationsAreValid =
 pexprs.end._assertAllApplicationsAreValid =
-pexprs.Terminal.prototype._assertAllApplicationsAreValid =
+pexprs.Prim.prototype._assertAllApplicationsAreValid =
 pexprs.Range.prototype._assertAllApplicationsAreValid =
 pexprs.Param.prototype._assertAllApplicationsAreValid =
 pexprs.UnicodeChar.prototype._assertAllApplicationsAreValid = function(ruleName, grammar) {
@@ -6849,8 +6939,16 @@ pexprs.Seq.prototype._assertAllApplicationsAreValid = function(ruleName, grammar
 
 pexprs.Iter.prototype._assertAllApplicationsAreValid =
 pexprs.Not.prototype._assertAllApplicationsAreValid =
-pexprs.Lookahead.prototype._assertAllApplicationsAreValid = function(ruleName, grammar) {
+pexprs.Lookahead.prototype._assertAllApplicationsAreValid =
+pexprs.Value.prototype._assertAllApplicationsAreValid =
+pexprs.Arr.prototype._assertAllApplicationsAreValid = function(ruleName, grammar) {
   this.expr._assertAllApplicationsAreValid(ruleName, grammar);
+};
+
+pexprs.Obj.prototype._assertAllApplicationsAreValid = function(ruleName, grammar) {
+  for (var idx = 0; idx < this.properties.length; idx++) {
+    this.properties[idx].pattern._assertAllApplicationsAreValid(ruleName, grammar);
+  }
 };
 
 pexprs.Apply.prototype._assertAllApplicationsAreValid = function(ruleName, grammar) {
@@ -6883,7 +6981,7 @@ pexprs.Apply.prototype._assertAllApplicationsAreValid = function(ruleName, gramm
   });
 };
 
-},{"./common":48,"./errors":49,"./pexprs":67}],54:[function(require,module,exports){
+},{"./common":48,"./errors":49,"./pexprs":69}],54:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -6902,7 +7000,7 @@ pexprs.PExpr.prototype.assertChoicesHaveUniformArity = common.abstract;
 
 pexprs.any.assertChoicesHaveUniformArity =
 pexprs.end.assertChoicesHaveUniformArity =
-pexprs.Terminal.prototype.assertChoicesHaveUniformArity =
+pexprs.Prim.prototype.assertChoicesHaveUniformArity =
 pexprs.Range.prototype.assertChoicesHaveUniformArity =
 pexprs.Param.prototype.assertChoicesHaveUniformArity =
 pexprs.Lex.prototype.assertChoicesHaveUniformArity =
@@ -6949,8 +7047,16 @@ pexprs.Not.prototype.assertChoicesHaveUniformArity = function(ruleName) {
   // no-op (not required b/c the nested expr doesn't show up in the CST)
 };
 
-pexprs.Lookahead.prototype.assertChoicesHaveUniformArity = function(ruleName) {
+pexprs.Lookahead.prototype.assertChoicesHaveUniformArity =
+pexprs.Arr.prototype.assertChoicesHaveUniformArity =
+pexprs.Value.prototype.assertChoicesHaveUniformArity = function(ruleName) {
   this.expr.assertChoicesHaveUniformArity(ruleName);
+};
+
+pexprs.Obj.prototype.assertChoicesHaveUniformArity = function(ruleName) {
+  for (var idx = 0; idx < this.properties.length; idx++) {
+    this.properties[idx].pattern.assertChoicesHaveUniformArity(ruleName);
+  }
 };
 
 pexprs.Apply.prototype.assertChoicesHaveUniformArity = function(ruleName) {
@@ -6958,7 +7064,7 @@ pexprs.Apply.prototype.assertChoicesHaveUniformArity = function(ruleName) {
   // `assertAllApplicationsAreValid()`.
 };
 
-},{"./common":48,"./errors":49,"./pexprs":67}],55:[function(require,module,exports){
+},{"./common":48,"./errors":49,"./pexprs":69}],55:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -6977,7 +7083,7 @@ pexprs.PExpr.prototype.assertIteratedExprsAreNotNullable = common.abstract;
 
 pexprs.any.assertIteratedExprsAreNotNullable =
 pexprs.end.assertIteratedExprsAreNotNullable =
-pexprs.Terminal.prototype.assertIteratedExprsAreNotNullable =
+pexprs.Prim.prototype.assertIteratedExprsAreNotNullable =
 pexprs.Range.prototype.assertIteratedExprsAreNotNullable =
 pexprs.Param.prototype.assertIteratedExprsAreNotNullable =
 pexprs.UnicodeChar.prototype.assertIteratedExprsAreNotNullable = function(grammar, ruleName) {
@@ -7008,8 +7114,16 @@ pexprs.Iter.prototype.assertIteratedExprsAreNotNullable = function(grammar, rule
 pexprs.Opt.prototype.assertIteratedExprsAreNotNullable =
 pexprs.Not.prototype.assertIteratedExprsAreNotNullable =
 pexprs.Lookahead.prototype.assertIteratedExprsAreNotNullable =
-pexprs.Lex.prototype.assertIteratedExprsAreNotNullable = function(grammar, ruleName) {
+pexprs.Lex.prototype.assertIteratedExprsAreNotNullable =
+pexprs.Value.prototype.assertIteratedExprsAreNotNullable =
+pexprs.Arr.prototype.assertIteratedExprsAreNotNullable = function(grammar, ruleName) {
   this.expr.assertIteratedExprsAreNotNullable(grammar, ruleName);
+};
+
+pexprs.Obj.prototype.assertIteratedExprsAreNotNullable = function(grammar, ruleName) {
+  for (var idx = 0; idx < this.properties.length; idx++) {
+    this.properties[idx].pattern.assertIteratedExprsAreNotNullable(grammar, ruleName);
+  }
 };
 
 pexprs.Apply.prototype.assertIteratedExprsAreNotNullable = function(grammar, ruleName) {
@@ -7018,7 +7132,28 @@ pexprs.Apply.prototype.assertIteratedExprsAreNotNullable = function(grammar, rul
   });
 };
 
-},{"./common":48,"./errors":49,"./pexprs":67}],56:[function(require,module,exports){
+},{"./common":48,"./errors":49,"./pexprs":69}],56:[function(require,module,exports){
+'use strict';
+
+// --------------------------------------------------------------------
+// Imports
+// --------------------------------------------------------------------
+
+var pexprs = require('./pexprs');
+
+// --------------------------------------------------------------------
+// Operations
+// --------------------------------------------------------------------
+
+// Checks that no PExpr combines a value expression (e.g., `null`, `3`) with a string fragment
+// expression (e.g., `"blah"`).
+pexprs.PExpr.prototype.assertValuesAndStringsAreNotMixed = function(grammar, ruleName) {
+  var memo = Object.create(null);
+  memo[ruleName] = pexprs.TYPE_ANY;  // Initialize memo table for the rule we are checking.
+  this.getExprType(grammar, memo);
+};
+
+},{"./pexprs":69}],57:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7045,7 +7180,7 @@ pexprs.end.check = function(grammar, vals) {
          vals[0].primitiveValue === undefined;
 };
 
-pexprs.Terminal.prototype.check = function(grammar, vals) {
+pexprs.Prim.prototype.check = function(grammar, vals) {
   return vals[0] instanceof nodes.Node &&
          vals[0].isTerminal() &&
          vals[0].primitiveValue === this.obj;
@@ -7116,8 +7251,29 @@ pexprs.Not.prototype.check = function(grammar, vals) {
 };
 
 pexprs.Lookahead.prototype.check =
-pexprs.Lex.prototype.check = function(grammar, vals) {
+pexprs.Lex.prototype.check =
+pexprs.Value.prototype.check =
+pexprs.Arr.prototype.check = function(grammar, vals) {
   return this.expr.check(grammar, vals);
+};
+
+pexprs.Obj.prototype.check = function(grammar, vals) {
+  var fixedArity = this.getArity();
+  if (this.isLenient) {
+    fixedArity--;
+  }
+
+  var pos = 0;
+  for (var i = 0; i < fixedArity; i++) {
+    var pattern = this.properties[i].pattern;
+    if (pattern.check(grammar, vals.slice(pos))) {
+      pos += pattern.getArity();
+    } else {
+      return false;
+    }
+  }
+
+  return this.isLenient ? typeof vals[pos] === 'object' && vals[pos] : true;
 };
 
 pexprs.Apply.prototype.check = function(grammar, vals) {
@@ -7140,13 +7296,14 @@ pexprs.UnicodeChar.prototype.check = function(grammar, vals) {
          typeof vals[0].primitiveValue === 'string';
 };
 
-},{"./common":48,"./nodes":51,"./pexprs":67}],57:[function(require,module,exports){
+},{"./common":48,"./nodes":51,"./pexprs":69}],58:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
 // Imports
 // --------------------------------------------------------------------
 
+var InputStream = require('./InputStream');
 var Trace = require('./Trace');
 var common = require('./common');
 var nodes = require('./nodes');
@@ -7159,6 +7316,9 @@ var IterationNode = nodes.IterationNode;
 // --------------------------------------------------------------------
 // Operations
 // --------------------------------------------------------------------
+
+// A safer version of hasOwnProperty.
+var hasOwnProp = Object.prototype.hasOwnProperty;
 
 /*
   Evaluate the expression and return `true` if it succeeds, `false` otherwise. This method should
@@ -7181,14 +7341,14 @@ pexprs.PExpr.prototype.eval = common.abstract;  // function(state) { ... }
 pexprs.any.eval = function(state) {
   var inputStream = state.inputStream;
   var origPos = inputStream.pos;
-  var ch = inputStream.next();
-  if (ch) {
-    var interval = inputStream.interval(origPos);
-    state.bindings.push(new TerminalNode(state.grammar, ch, interval));
-    return true;
-  } else {
+  var value = inputStream.next();
+  if (value === common.fail) {
     state.processFailure(origPos, this);
     return false;
+  } else {
+    var interval = inputStream.interval(origPos);
+    state.bindings.push(new TerminalNode(state.grammar, value, interval));
+    return true;
   }
 };
 
@@ -7205,10 +7365,10 @@ pexprs.end.eval = function(state) {
   }
 };
 
-pexprs.Terminal.prototype.eval = function(state) {
+pexprs.Prim.prototype.eval = function(state) {
   var inputStream = state.inputStream;
   var origPos = inputStream.pos;
-  if (!inputStream.matchString(this.obj)) {
+  if (this.match(inputStream) === common.fail) {
     state.processFailure(origPos, this);
     return false;
   } else {
@@ -7219,13 +7379,19 @@ pexprs.Terminal.prototype.eval = function(state) {
   }
 };
 
+pexprs.Prim.prototype.match = function(inputStream) {
+  return typeof this.obj === 'string' ?
+      inputStream.matchString(this.obj) :
+      inputStream.matchExactly(this.obj);
+};
+
 pexprs.Range.prototype.eval = function(state) {
   var inputStream = state.inputStream;
   var origPos = inputStream.pos;
-  var ch = inputStream.next();
-  if (ch && this.from <= ch && ch <= this.to) {
+  var obj = inputStream.next();
+  if (typeof obj === typeof this.from && this.from <= obj && obj <= this.to) {
     var interval = inputStream.interval(origPos);
-    state.bindings.push(new TerminalNode(state.grammar, ch, interval));
+    state.bindings.push(new TerminalNode(state.grammar, obj, interval));
     return true;
   } else {
     state.processFailure(origPos, this);
@@ -7337,6 +7503,69 @@ pexprs.Lookahead.prototype.eval = function(state) {
   }
 };
 
+pexprs.Arr.prototype.eval = function(state) {
+  var obj = state.inputStream.next();
+  if (Array.isArray(obj)) {
+    state.pushInputStream(InputStream.newFor(obj));
+    var ans = state.eval(this.expr) && state.inputStream.atEnd();
+    state.popInputStream();
+    return ans;
+  } else {
+    return false;
+  }
+};
+
+pexprs.Value.prototype.eval = function(state) {
+  var obj = state.inputStream.next();
+  if (typeof obj === 'string') {
+    state.pushInputStream(InputStream.newFor(obj));
+    var ans = state.eval(this.expr) && state.inputStream.atEnd();
+    state.popInputStream();
+    return ans;
+  } else {
+    return false;
+  }
+};
+
+pexprs.Obj.prototype.eval = function(state) {
+  var inputStream = state.inputStream;
+  var origPos = inputStream.pos;
+  var obj = inputStream.next();
+  if (obj !== common.fail && obj && (typeof obj === 'object' || typeof obj === 'function')) {
+    var numOwnPropertiesMatched = 0;
+    for (var idx = 0; idx < this.properties.length; idx++) {
+      var property = this.properties[idx];
+      if (!hasOwnProp.call(obj, property.name)) {
+        return false;
+      }
+      var value = obj[property.name];
+      var expr = property.pattern;
+      state.pushInputStream(expr.newInputStreamFor([value], state.grammar));
+      var matched = state.eval(expr) && state.inputStream.atEnd();
+      state.popInputStream();
+      if (!matched) {
+        return false;
+      }
+      numOwnPropertiesMatched++;
+    }
+    if (this.isLenient) {
+      var remainder = {};
+      for (var p in obj) {
+        if (hasOwnProp.call(obj, p) && this.properties.indexOf(p) < 0) {
+          remainder[p] = obj[p];
+        }
+      }
+      var interval = inputStream.interval(origPos);
+      state.bindings.push(new TerminalNode(state.grammar, remainder, interval));
+      return true;
+    } else {
+      return numOwnPropertiesMatched === Object.keys(obj).length;
+    }
+  } else {
+    return false;
+  }
+};
+
 pexprs.Apply.prototype.eval = function(state) {
   var caller = state.currentApplication();
   var actuals = caller ? caller.args : [];
@@ -7440,6 +7669,19 @@ pexprs.Apply.prototype.evalOnce = function(expr, state) {
   var inputStream = state.inputStream;
   var origPos = inputStream.pos;
 
+  // If `matchNodes` is true and the next thing in the input stream is a Node whose type matches
+  // this rule, then accept that as a valid match -- but not for the top-level application.
+  if (state.matchNodes && state.applicationStack.length > 1) {
+    var node = inputStream.next();
+    if (node instanceof nodes.Node &&
+        node.grammar === state.grammar &&
+        node.ctorName === this.ruleName) {
+      return node;
+    } else {
+      inputStream.pos = origPos;
+    }
+  }
+
   if (state.eval(expr)) {
     var arity = expr.getArity();
     var bindings = state.bindings.splice(state.bindings.length - arity, arity);
@@ -7488,18 +7730,18 @@ pexprs.Apply.prototype.growSeedResult = function(body, state, origPos, lrMemoRec
 pexprs.UnicodeChar.prototype.eval = function(state) {
   var inputStream = state.inputStream;
   var origPos = inputStream.pos;
-  var ch = inputStream.next();
-  if (ch && this.pattern.test(ch)) {
-    var interval = inputStream.interval(origPos);
-    state.bindings.push(new TerminalNode(state.grammar, ch, interval));
-    return true;
-  } else {
+  var value = inputStream.next();
+  if (value === common.fail || !this.pattern.test(value)) {
     state.processFailure(origPos, this);
     return false;
+  } else {
+    var interval = inputStream.interval(origPos);
+    state.bindings.push(new TerminalNode(state.grammar, value, interval));
+    return true;
   }
 };
 
-},{"./Trace":47,"./common":48,"./nodes":51,"./pexprs":67}],58:[function(require,module,exports){
+},{"./InputStream":40,"./Trace":47,"./common":48,"./nodes":51,"./pexprs":69}],59:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7517,7 +7759,7 @@ pexprs.PExpr.prototype.getArity = common.abstract;
 
 pexprs.any.getArity =
 pexprs.end.getArity =
-pexprs.Terminal.prototype.getArity =
+pexprs.Prim.prototype.getArity =
 pexprs.Range.prototype.getArity =
 pexprs.Param.prototype.getArity =
 pexprs.Apply.prototype.getArity =
@@ -7548,11 +7790,137 @@ pexprs.Not.prototype.getArity = function() {
 };
 
 pexprs.Lookahead.prototype.getArity =
-pexprs.Lex.prototype.getArity = function() {
+pexprs.Lex.prototype.getArity =
+pexprs.Value.prototype.getArity =
+pexprs.Arr.prototype.getArity = function() {
   return this.expr.getArity();
 };
 
-},{"./common":48,"./pexprs":67}],59:[function(require,module,exports){
+pexprs.Obj.prototype.getArity = function() {
+  var arity = this.isLenient ? 1 : 0;
+  for (var idx = 0; idx < this.properties.length; idx++) {
+    arity += this.properties[idx].pattern.getArity();
+  }
+  return arity;
+};
+
+},{"./common":48,"./pexprs":69}],60:[function(require,module,exports){
+'use strict';
+
+// --------------------------------------------------------------------
+// Imports
+// --------------------------------------------------------------------
+
+var common = require('./common');
+var errors = require('./errors');
+var pexprs = require('./pexprs');
+
+// --------------------------------------------------------------------
+// Operations
+// --------------------------------------------------------------------
+
+function typeFromPrimitive(prim) {
+  return typeof prim === 'string' ? pexprs.TYPE_STRING : pexprs.TYPE_VALUE;
+}
+
+/*
+  Returns the type of this PExpr -- one of `TYPE_STRING`, `TYPE_VALUE`, or `TYPE_ANY`.
+  String expressions (e.g. `"foo"`) and value expressions (e.g., `null`, `3`) cannot be combined
+  with each other, but they may be combined with TYPE_ANY expressions. An exception is thrown if
+  an expression with inconsistent types is encountered.
+
+  The result of this method is cached as a property on the node. For rule applications, the
+  result is cached in a separate memo table, so that the result can be shared for all `Apply`
+  nodes having the same parameters.
+*/
+pexprs.PExpr.prototype.getExprType = function(grammar, optMemo) {
+  if (!this.hasOwnProperty('_exprType')) {
+    var memo = optMemo || Object.create(null);
+    Object.defineProperty(this, '_exprType', {
+      value: this._calculateExprType(grammar, memo)
+    });
+  }
+  return this._exprType;
+};
+
+/*
+  The actual implementation of getExprType, with no caching logic. These implementations
+  should only be invoked directly by the implementation of getExprType above.
+*/
+pexprs.PExpr.prototype._calculateExprType = common.abstract;
+
+pexprs.any._calculateExprType =
+pexprs.UnicodeChar.prototype._calculateExprType = function(grammar, memo) {
+  return pexprs.TYPE_STRING;
+};
+
+pexprs.end._calculateExprType = function(grammar, memo) {
+  return pexprs.TYPE_ANY;
+};
+
+pexprs.Range.prototype._calculateExprType = function(grammar, memo) {
+  return typeFromPrimitive(this.from) | typeFromPrimitive(this.to);
+};
+
+pexprs.Arr.prototype._calculateExprType =
+pexprs.Obj.prototype._calculateExprType =
+pexprs.Value.prototype._calculateExprType = function(grammar, memo) {
+  return pexprs.TYPE_VALUE;
+};
+
+pexprs.Prim.prototype._calculateExprType = function(grammar, memo) {
+  return typeFromPrimitive(this.obj);
+};
+
+pexprs.Alt.prototype._calculateExprType = function(grammar, memo) {
+  var ans = this.terms.reduce(function(acc, t) {
+    return acc | t.getExprType(grammar, memo);
+  }, 0);
+  if (ans === pexprs.TYPE_INCONSISTENT) {
+    throw errors.exprMixesValueAndStringExpressions(this);
+  }
+  return ans;
+};
+
+pexprs.Seq.prototype._calculateExprType = function(grammar, memo) {
+  var ans = this.factors.reduce(function(acc, f) {
+    return acc | f.getExprType(grammar, memo);
+  }, 0);
+  if (ans === pexprs.TYPE_INCONSISTENT) {
+    throw errors.exprMixesValueAndStringExpressions(this);
+  }
+  return ans;
+};
+
+pexprs.Iter.prototype._calculateExprType =
+pexprs.Not.prototype._calculateExprType =
+pexprs.Lookahead.prototype._calculateExprType =
+pexprs.Lex.prototype._calculateExprType = function(grammar, memo) {
+  return this.expr.getExprType(grammar, memo);
+};
+
+pexprs.Param.prototype._calculateExprType = function(grammar, memo) {
+  // Throwing an error here ensures that we never calculate and cache the result of an
+  // expression containing unbound parameters, because it could be incorrect.
+  throw new Error('Cannot calculate _calculateExprType for unbound parameter');
+};
+
+pexprs.Apply.prototype._calculateExprType = function(grammar, memo) {
+  var key = this.toMemoKey();
+  if (!Object.prototype.hasOwnProperty.call(memo, key)) {
+    var inlinedBody = grammar.ruleBodies[this.ruleName].substituteParams(this.args);
+
+    // Initialize a memo value to prevent infinite recursion for recursive rules.
+    // Use TYPE_ANY because it is the identity of the bitwise 'or' operator, ensuring that a rule
+    // like 'x = x | String' will return `TYPE_STRING`.
+    memo[key] = pexprs.TYPE_ANY;
+
+    memo[key] = inlinedBody.getExprType(grammar, memo);
+  }
+  return memo[key];
+};
+
+},{"./common":48,"./errors":49,"./pexprs":69}],61:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7575,7 +7943,7 @@ pexprs.PExpr.prototype.introduceParams = common.abstract;
 
 pexprs.any.introduceParams =
 pexprs.end.introduceParams =
-pexprs.Terminal.prototype.introduceParams =
+pexprs.Prim.prototype.introduceParams =
 pexprs.Range.prototype.introduceParams =
 pexprs.Param.prototype.introduceParams =
 pexprs.UnicodeChar.prototype.introduceParams = function(formals) {
@@ -7599,8 +7967,17 @@ pexprs.Seq.prototype.introduceParams = function(formals) {
 pexprs.Iter.prototype.introduceParams =
 pexprs.Not.prototype.introduceParams =
 pexprs.Lookahead.prototype.introduceParams =
-pexprs.Lex.prototype.introduceParams = function(formals) {
+pexprs.Lex.prototype.introduceParams =
+pexprs.Value.prototype.introduceParams =
+pexprs.Arr.prototype.introduceParams = function(formals) {
   this.expr = this.expr.introduceParams(formals);
+  return this;
+};
+
+pexprs.Obj.prototype.introduceParams = function(formals) {
+  this.properties.forEach(function(property, idx) {
+    property.pattern = property.pattern.introduceParams(formals);
+  });
   return this;
 };
 
@@ -7620,7 +7997,7 @@ pexprs.Apply.prototype.introduceParams = function(formals) {
   }
 };
 
-},{"./common":48,"./pexprs":67}],60:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],62:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7645,6 +8022,9 @@ pexprs.any._isNullable =
 pexprs.Range.prototype._isNullable =
 pexprs.Param.prototype._isNullable =
 pexprs.Plus.prototype._isNullable =
+pexprs.Value.prototype._isNullable =
+pexprs.Arr.prototype._isNullable =
+pexprs.Obj.prototype._isNullable =
 pexprs.UnicodeChar.prototype._isNullable = function(grammar, memo) {
   return false;
 };
@@ -7653,7 +8033,7 @@ pexprs.end._isNullable = function(grammar, memo) {
   return true;
 };
 
-pexprs.Terminal.prototype._isNullable = function(grammar, memo) {
+pexprs.Prim.prototype._isNullable = function(grammar, memo) {
   if (typeof this.obj === 'string') {
     // This is an over-simplification: it's only correct if the input is a string. If it's an array
     // or an object, then the empty string parsing expression is not nullable.
@@ -7694,7 +8074,7 @@ pexprs.Apply.prototype._isNullable = function(grammar, memo) {
   return memo[key];
 };
 
-},{"./common":48,"./pexprs":67}],61:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],63:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7741,8 +8121,8 @@ pexprs.end.outputRecipe = function(sb, formals, grammarInterval) {
   throw new Error('should never output a recipe for `end` expression');
 };
 
-pexprs.Terminal.prototype.outputRecipe = function(sb, formals, grammarInterval) {
-  sb.append('this.terminal(');
+pexprs.Prim.prototype.outputRecipe = function(sb, formals, grammarInterval) {
+  sb.append('this.prim(');
   sb.append(typeof this.obj === 'string' ? escapeString(this.obj) : '' + this.obj);
   sb.append(')' + getIntervalInfo(this, grammarInterval));
 };
@@ -7790,7 +8170,8 @@ pexprs.Star.prototype.outputRecipe =
 pexprs.Plus.prototype.outputRecipe =
 pexprs.Opt.prototype.outputRecipe =
 pexprs.Not.prototype.outputRecipe =
-pexprs.Lex.prototype.outputRecipe = function(sb, formals, grammarInterval) {
+pexprs.Lex.prototype.outputRecipe =
+pexprs.Arr.prototype.outputRecipe = function(sb, formals, grammarInterval) {
   sb.append('this.' + this.constructor.name.toLowerCase() + '(');
   this.expr.outputRecipe(sb, formals, grammarInterval);
   sb.append(')' + getIntervalInfo(this, grammarInterval));
@@ -7799,6 +8180,33 @@ pexprs.Lex.prototype.outputRecipe = function(sb, formals, grammarInterval) {
 pexprs.Lookahead.prototype.outputRecipe = function(sb, formals, grammarInterval) {
   sb.append('this.la(');
   this.expr.outputRecipe(sb, formals, grammarInterval);
+  sb.append(')' + getIntervalInfo(this, grammarInterval));
+};
+
+pexprs.Value.prototype.outputRecipe = function(sb, formals, grammarInterval) {
+  sb.append('this.val(');
+  this.expr.outputRecipe(sb, formals, grammarInterval);
+  sb.append(')' + getIntervalInfo(this, grammarInterval));
+};
+
+pexprs.Obj.prototype.outputRecipe = function(sb, formals, grammarInterval) {
+  function outputPropertyRecipe(prop) {
+    sb.append('{name: ');
+    sb.append(JSON.stringify(prop.name));
+    sb.append(', pattern: ');
+    prop.pattern.outputRecipe(sb, formals, grammarInterval);
+    sb.append('}');
+  }
+
+  sb.append('this.obj([');
+  for (var idx = 0; idx < this.properties.length; idx++) {
+    if (idx > 0) {
+      sb.append(', ');
+    }
+    outputPropertyRecipe(this.properties[idx]);
+  }
+  sb.append('], ');
+  sb.append(!!this.isLenient);
   sb.append(')' + getIntervalInfo(this, grammarInterval));
 };
 
@@ -7822,7 +8230,7 @@ pexprs.Apply.prototype.outputRecipe = function(sb, formals, grammarInterval) {
   sb.append(')' + getIntervalInfo(this, grammarInterval));
 };
 
-},{"./common":48,"./pexprs":67}],62:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],64:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7846,9 +8254,9 @@ pexprs.PExpr.prototype.substituteParams = common.abstract;  // function(actuals)
 
 pexprs.any.substituteParams =
 pexprs.end.substituteParams =
-pexprs.Terminal.prototype.substituteParams =
+pexprs.Prim.prototype.substituteParams =
 pexprs.Range.prototype.substituteParams =
-pexprs.Terminal.prototype.substituteParams =
+pexprs.Prim.prototype.substituteParams =
 pexprs.UnicodeChar.prototype.substituteParams = function(actuals) {
   return this;
 };
@@ -7870,8 +8278,20 @@ pexprs.Seq.prototype.substituteParams = function(actuals) {
 pexprs.Iter.prototype.substituteParams =
 pexprs.Not.prototype.substituteParams =
 pexprs.Lookahead.prototype.substituteParams =
-pexprs.Lex.prototype.substituteParams = function(actuals) {
+pexprs.Lex.prototype.substituteParams =
+pexprs.Value.prototype.substituteParams =
+pexprs.Arr.prototype.substituteParams = function(actuals) {
   return new this.constructor(this.expr.substituteParams(actuals));
+};
+
+pexprs.Obj.prototype.substituteParams = function(actuals) {
+  var properties = this.properties.map(function(property) {
+    return {
+      name: property.name,
+      pattern: property.pattern.substituteParams(actuals)
+    };
+  });
+  return new pexprs.Obj(properties, this.isLenient);
 };
 
 pexprs.Apply.prototype.substituteParams = function(actuals) {
@@ -7884,7 +8304,7 @@ pexprs.Apply.prototype.substituteParams = function(actuals) {
   }
 };
 
-},{"./common":48,"./pexprs":67}],63:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],65:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -7931,7 +8351,7 @@ pexprs.end.toArgumentNameList = function(firstArgIndex) {
   return ['end'];
 };
 
-pexprs.Terminal.prototype.toArgumentNameList = function(firstArgIndex) {
+pexprs.Prim.prototype.toArgumentNameList = function(firstArgIndex) {
   if (typeof this.obj === 'string' && /^[_a-zA-Z0-9]+$/.test(this.obj)) {
     // If this terminal is a valid suffix for a JS identifier, just prepend it with '_'
     return ['_' + this.obj];
@@ -8035,7 +8455,7 @@ pexprs.UnicodeChar.prototype.toArgumentNameList = function(firstArgIndex) {
 
 // "Value pexprs" (Value, Str, Arr, Obj) are going away soon, so we don't worry about them here.
 
-},{"./common":48,"./pexprs":67}],64:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],66:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -8057,7 +8477,10 @@ pexprs.Seq.prototype.toDisplayString =
 pexprs.Iter.prototype.toDisplayString =
 pexprs.Not.prototype.toDisplayString =
 pexprs.Lookahead.prototype.toDisplayString =
-pexprs.Lex.prototype.toDisplayString = function() {
+pexprs.Lex.prototype.toDisplayString =
+pexprs.Value.prototype.toDisplayString =
+pexprs.Arr.prototype.toDisplayString =
+pexprs.Obj.prototype.toDisplayString = function() {
   if (this.interval) {
     return this.interval.trimmed().contents;
   }
@@ -8072,7 +8495,7 @@ pexprs.end.toDisplayString = function() {
   return 'end';
 };
 
-pexprs.Terminal.prototype.toDisplayString = function() {
+pexprs.Prim.prototype.toDisplayString = function() {
   return JSON.stringify(this.obj);
 };
 
@@ -8092,7 +8515,7 @@ pexprs.UnicodeChar.prototype.toDisplayString = function() {
   return 'Unicode {' + this.category + '} character';
 };
 
-},{"./common":48,"./pexprs":67}],65:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],67:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -8117,7 +8540,7 @@ pexprs.end.toFailure = function(grammar) {
   return new Failure('end of input', 'description');
 };
 
-pexprs.Terminal.prototype.toFailure = function(grammar) {
+pexprs.Prim.prototype.toFailure = function(grammar) {
   return typeof this.obj === 'string' ?
     new Failure(this.obj, 'string') :
     new Failure(JSON.stringify(this.obj), 'code');
@@ -8150,7 +8573,7 @@ pexprs.UnicodeChar.prototype.toFailure = function(grammar) {
   return new Failure(this.toDisplayString(), 'description');
 };
 
-},{"./Failure":37,"./common":48,"./pexprs":67}],66:[function(require,module,exports){
+},{"./Failure":37,"./common":48,"./pexprs":69}],68:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -8181,7 +8604,7 @@ pexprs.end.toString = function() {
   return 'end';
 };
 
-pexprs.Terminal.prototype.toString = function() {
+pexprs.Prim.prototype.toString = function() {
   return JSON.stringify(this.obj);
 };
 
@@ -8195,6 +8618,10 @@ pexprs.Param.prototype.toString = function() {
 
 pexprs.Lex.prototype.toString = function() {
   return '#(' + this.expr.toString() + ')';
+};
+
+pexprs.Value.prototype.toString = function() {
+  return '$(' + this.expr.toString() + ')';
 };
 
 pexprs.Alt.prototype.toString = function() {
@@ -8221,6 +8648,34 @@ pexprs.Lookahead.prototype.toString = function() {
   return '&' + this.expr;
 };
 
+pexprs.Arr.prototype.toString = function() {
+  return '[' + this.expr.toString() + ']';
+};
+
+pexprs.Obj.prototype.toString = function() {
+  var parts = ['{'];
+
+  var first = true;
+  function emit(part) {
+    if (first) {
+      first = false;
+    } else {
+      parts.push(', ');
+    }
+    parts.push(part);
+  }
+
+  this.properties.forEach(function(property) {
+    emit(JSON.stringify(property.name) + ': ' + property.pattern.toString());
+  });
+  if (this.isLenient) {
+    emit('...');
+  }
+
+  parts.push('}');
+  return parts.join('');
+};
+
 pexprs.Apply.prototype.toString = function() {
   if (this.args.length > 0) {
     var ps = this.args.map(function(arg) { return arg.toString(); });
@@ -8234,13 +8689,14 @@ pexprs.UnicodeChar.prototype.toString = function() {
   return '\\p{' + this.category + '}';
 };
 
-},{"./common":48,"./pexprs":67}],67:[function(require,module,exports){
+},{"./common":48,"./pexprs":69}],69:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
 // Imports
 // --------------------------------------------------------------------
 
+var InputStream = require('./InputStream');
 var UnicodeCategories = require('../third_party/UnicodeCategories');
 var common = require('./common');
 var errors = require('./errors');
@@ -8251,6 +8707,12 @@ var inherits = require('inherits');
 // --------------------------------------------------------------------
 
 // General stuff
+
+// Constants representing the type of a PExpr. See pexprs-getExprType.js for
+// more information.
+var TYPE_ANY = 0;
+var TYPE_STRING = 1;
+var TYPE_VALUE = 2;
 
 function PExpr() {
   throw new Error("PExpr cannot be instantiated -- it's abstract");
@@ -8264,6 +8726,16 @@ PExpr.prototype.withInterval = function(interval) {
   return this;
 };
 
+// Allocate the appropriate input stream for this expression and the given values.
+PExpr.prototype.newInputStreamFor = function(values, grammar) {
+  var exprType = this.getExprType(grammar);
+  if (values.length === 1 && typeof values[0] === 'string' && exprType !== TYPE_VALUE) {
+    return InputStream.newFor(values[0]);
+  } else {
+    return InputStream.newFor(values);
+  }
+};
+
 // Any
 
 var any = Object.create(PExpr.prototype);
@@ -8272,12 +8744,12 @@ var any = Object.create(PExpr.prototype);
 
 var end = Object.create(PExpr.prototype);
 
-// Terminals
+// Primitives
 
-function Terminal(obj) {
+function Prim(obj) {
   this.obj = obj;
 }
-inherits(Terminal, PExpr);
+inherits(Prim, PExpr);
 
 // Ranges
 
@@ -8372,6 +8844,13 @@ function Lex(expr) {
 }
 inherits(Lex, PExpr);
 
+// "Value-ification"
+
+function Value(expr) {
+  this.expr = expr;
+}
+inherits(Value, PExpr);
+
 // Array decomposition
 
 function Arr(expr) {
@@ -8432,10 +8911,15 @@ inherits(UnicodeChar, PExpr);
 // Exports
 // --------------------------------------------------------------------
 
+exports.TYPE_ANY = TYPE_ANY;
+exports.TYPE_STRING = TYPE_STRING;
+exports.TYPE_VALUE = TYPE_VALUE;
+exports.TYPE_INCONSISTENT = TYPE_STRING | TYPE_VALUE;
+
 exports.PExpr = PExpr;
 exports.any = any;
 exports.end = end;
-exports.Terminal = Terminal;
+exports.Prim = Prim;
 exports.Range = Range;
 exports.Param = Param;
 exports.Alt = Alt;
@@ -8448,6 +8932,7 @@ exports.Opt = Opt;
 exports.Not = Not;
 exports.Lookahead = Lookahead;
 exports.Lex = Lex;
+exports.Value = Value;
 exports.Arr = Arr;
 exports.Str = Str;
 exports.Obj = Obj;
@@ -8462,9 +8947,11 @@ require('./pexprs-allowsSkippingPrecedingSpace');
 require('./pexprs-assertAllApplicationsAreValid');
 require('./pexprs-assertChoicesHaveUniformArity');
 require('./pexprs-assertIteratedExprsAreNotNullable');
+require('./pexprs-assertValuesAndStringsAreNotMixed');
 require('./pexprs-check');
 require('./pexprs-eval');
 require('./pexprs-getArity');
+require('./pexprs-getExprType');
 require('./pexprs-outputRecipe');
 require('./pexprs-introduceParams');
 require('./pexprs-isNullable');
@@ -8474,7 +8961,7 @@ require('./pexprs-toArgumentNameList');
 require('./pexprs-toFailure');
 require('./pexprs-toString');
 
-},{"../third_party/UnicodeCategories":69,"./common":48,"./errors":49,"./pexprs-allowsSkippingPrecedingSpace":52,"./pexprs-assertAllApplicationsAreValid":53,"./pexprs-assertChoicesHaveUniformArity":54,"./pexprs-assertIteratedExprsAreNotNullable":55,"./pexprs-check":56,"./pexprs-eval":57,"./pexprs-getArity":58,"./pexprs-introduceParams":59,"./pexprs-isNullable":60,"./pexprs-outputRecipe":61,"./pexprs-substituteParams":62,"./pexprs-toArgumentNameList":63,"./pexprs-toDisplayString":64,"./pexprs-toFailure":65,"./pexprs-toString":66,"inherits":33}],68:[function(require,module,exports){
+},{"../third_party/UnicodeCategories":71,"./InputStream":40,"./common":48,"./errors":49,"./pexprs-allowsSkippingPrecedingSpace":52,"./pexprs-assertAllApplicationsAreValid":53,"./pexprs-assertChoicesHaveUniformArity":54,"./pexprs-assertIteratedExprsAreNotNullable":55,"./pexprs-assertValuesAndStringsAreNotMixed":56,"./pexprs-check":57,"./pexprs-eval":58,"./pexprs-getArity":59,"./pexprs-getExprType":60,"./pexprs-introduceParams":61,"./pexprs-isNullable":62,"./pexprs-outputRecipe":63,"./pexprs-substituteParams":64,"./pexprs-toArgumentNameList":65,"./pexprs-toDisplayString":66,"./pexprs-toFailure":67,"./pexprs-toString":68,"inherits":33}],70:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -8624,7 +9111,7 @@ exports.getLineAndColumnMessage = function(str, offset /* ...ranges */) {
   return sb.contents();
 };
 
-},{"./common":48}],69:[function(require,module,exports){
+},{"./common":48}],71:[function(require,module,exports){
 // Based on https://github.com/tvcutsem/es-lab/blob/master/src/parser/unicode.js.
 // These are just categories that are used in ES5.
 // The full list of Unicode categories is here: http://www.fileformat.info/info/unicode/category/index.htm.
