@@ -1,5 +1,4 @@
 "use strict";
-var todoExists = Syndicate.Struct.makeConstructor("todoExists", ["id"]);
 var todo = Syndicate.Struct.makeConstructor("todo", ["id","title","completed"]);
 
 var createTodo = Syndicate.Struct.makeConstructor("createTodo", ["title"]);
@@ -27,7 +26,6 @@ function todoListItemModel(initialId, initialTitle, initialCompleted) {
     this.completed = initialCompleted;
 
     Syndicate.Actor.createFacet()
-.addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(todoExists(this.id), 0); }))
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(todo(this.id,this.title,this.completed), 0); }))
 .onEvent(false, "message", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(setCompleted(this.id,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: setCompleted(this.id,(Syndicate._$("v"))), metalevel: 0 }; }), (function(v) { this.completed = v; }))
 .onEvent(false, "message", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(setAllCompleted(_), 0); }), (function() { var _ = Syndicate.__; return { assertion: setAllCompleted((Syndicate._$("v"))), metalevel: 0 }; }), (function(v) { this.completed = v; }))
@@ -80,7 +78,7 @@ function todoListItemView(id) {
         Syndicate.Dataspace.send((newTitle ? setTitle(id, newTitle) : deleteTodo(id)));
         this.editing = false;
       }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todoExists(id), 0); }), (function() { var _ = Syndicate.__; return { assertion: todoExists(id), metalevel: 0 }; }), (function() {})).completeBuild();
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(id,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo(id,_,_), metalevel: 0 }; }), (function() {})).completeBuild();
   });
 }
 
@@ -123,7 +121,7 @@ var G = new Syndicate.Ground(function () {
 .onEvent(false, "message", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.UI.globalEvent('.toggle-all','change',_), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.UI.globalEvent('.toggle-all','change',(Syndicate._$("e"))), metalevel: 0 }; }), (function(e) {
         Syndicate.Dataspace.send(setAllCompleted(e.target.checked));
       }))
-.onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todoExists(_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todoExists((Syndicate._$("id"))), metalevel: 0 }; }), (function(id) {
+.onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(_,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo((Syndicate._$("id")),_,_), metalevel: 0 }; }), (function(id) {
         todoListItemView(id);
       })).completeBuild();
   });
@@ -132,8 +130,8 @@ var G = new Syndicate.Ground(function () {
     var completedCount = 0;
     var activeCount = 0;
     Syndicate.Actor.createFacet()
-.onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(_,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo(_,_,(Syndicate._$("completed"))), metalevel: 0 }; }), (function(completed) { if (completed) completedCount++; else activeCount++; }))
-.onEvent(false, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(_,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo(_,_,(Syndicate._$("completed"))), metalevel: 0 }; }), (function(completed) { if (completed) completedCount--; else activeCount--; }))
+.onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(_,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo((Syndicate._$("id")),_,(Syndicate._$("completed"))), metalevel: 0 }; }), (function(id, completed) { if (completed) completedCount++; else activeCount++; }))
+.onEvent(false, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(_,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo((Syndicate._$("id")),_,(Syndicate._$("completed"))), metalevel: 0 }; }), (function(id, completed) { if (completed) completedCount--; else activeCount--; }))
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(activeTodoCount(activeCount), 0); }))
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(completedTodoCount(completedCount), 0); }))
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(totalTodoCount(activeCount+completedCount), 0); }))
@@ -180,15 +178,17 @@ var G = new Syndicate.Ground(function () {
 .onEvent(false, "message", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(createTodo(_), 0); }), (function() { var _ = Syndicate.__; return { assertion: createTodo((Syndicate._$("title"))), metalevel: 0 }; }), (function(title) {
         todoListItemModel(db.nextId++, title, false);
       }))
-.onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(_,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo((Syndicate._$("id")),(Syndicate._$("title")),(Syndicate._$("completed"))), metalevel: 0 }; }), (function(id, title, completed) { Syndicate.Actor.createFacet()
+.onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(_,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo((Syndicate._$("id")),_,_), metalevel: 0 }; }), (function(id) { Syndicate.Actor.createFacet()
+.onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(id,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo(id,(Syndicate._$("title")),(Syndicate._$("completed"))), metalevel: 0 }; }), (function(title, completed) { Syndicate.Actor.createFacet()
 .addInitBlock((function() {
-          db.todos[id] = {id: id, title: title, completed: completed};
-          localStorage['todos-syndicate'] = JSON.stringify(db);
-        }))
+            db.todos[id] = {id: id, title: title, completed: completed};
+            localStorage['todos-syndicate'] = JSON.stringify(db);
+          }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(id,title,completed), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo(id,title,completed), metalevel: 0 }; }), (function() {})).completeBuild(); }))
 .addDoneBlock((function() {
           delete db.todos[id];
           localStorage['todos-syndicate'] = JSON.stringify(db);
         }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(id,title,completed), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo(id,title,completed), metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild();
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(id,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo(id,_,_), metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild();
   });
 }).startStepping();
