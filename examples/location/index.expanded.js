@@ -54,6 +54,12 @@ var G = new Syndicate.Ground(function () {
             mapInitialized = true;
             map.setCenter({lat: pos.coords.latitude, lng: pos.coords.longitude});
           }
+        }, function (err) {
+          console.error(err);
+          alert(err);
+        }, {
+          enableHighAccuracy: true,
+          timeout: 15000
         }));
 
     (function () { var currentLocation = null; var selectedMarker = null;
@@ -61,7 +67,9 @@ Syndicate.Actor.createFacet()
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(brokerConnection(wsurl), 0); }))
 .addAssertion((function() { var _ = Syndicate.__; return (currentLocation) ? Syndicate.Patch.assert(toBroker(wsurl,currentLocation), 0) : Syndicate.Patch.emptyPatch; }))
 .onEvent(false, "message", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.UI.globalEvent('#my_email','change',_), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.UI.globalEvent('#my_email','change',_), metalevel: 0 }; }), (function() {
-        localStorage.my_email = currentLocation[1] = email_element.value.trim();
+        var v = email_element.value.trim();
+        if (currentLocation) currentLocation[1] = v;
+        localStorage.my_email = v;
       }))
 .onEvent(false, "message", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.UI.globalEvent('#group','change',_), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.UI.globalEvent('#group','change',_), metalevel: 0 }; }), (function() {
         localStorage.group = group_element.value.trim();
@@ -97,7 +105,7 @@ Syndicate.Actor.createFacet()
             });
           }
         }
-var _cachedAssertion1465643052024_0 = (function() { var _ = Syndicate.__; return fromBroker(wsurl,locationRecord(id,email,_,_,_)); })();
+var _cachedAssertion1466612263597_0 = (function() { var _ = Syndicate.__; return fromBroker(wsurl,locationRecord(id,email,_,_,_)); })();
 Syndicate.Actor.createFacet()
 .addInitBlock((function() {
           marker.addListener('click', Syndicate.Dataspace.wrap(function () {
@@ -120,6 +128,6 @@ Syndicate.Actor.createFacet()
           marker.setMap(null);
           if (selectedMarker === marker) selectedMarker = null;
         }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1465643052024_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1465643052024_0, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); })();
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612263597_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612263597_0, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); })();
   });
 }).startStepping();

@@ -53,6 +53,12 @@ ground dataspace G {
             mapInitialized = true;
             map.setCenter({lat: pos.coords.latitude, lng: pos.coords.longitude});
           }
+        }, function (err) {
+          console.error(err);
+          alert(err);
+        }, {
+          enableHighAccuracy: true,
+          timeout: 15000
         }));
 
     react {
@@ -63,7 +69,9 @@ ground dataspace G {
       assert toBroker(wsurl, currentLocation) when (currentLocation);
 
       on message Syndicate.UI.globalEvent('#my_email', 'change', _) {
-        localStorage.my_email = currentLocation[1] = email_element.value.trim();
+        var v = email_element.value.trim();
+        if (currentLocation) currentLocation[1] = v;
+        localStorage.my_email = v;
       }
 
       on message Syndicate.UI.globalEvent('#group', 'change', _) {
