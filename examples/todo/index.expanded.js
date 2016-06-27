@@ -54,14 +54,14 @@ function todoListItemView(id) {
     (function () { 
 Syndicate.Actor.createFacet()
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(id,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo(id,(Syndicate._$("title")),(Syndicate._$("completed"))), metalevel: 0 }; }), (function(title, completed) { 
-var _cachedAssertion1466612264870_0 = (function() { var _ = Syndicate.__; return todo(id,title,completed); })();
+var _cachedAssertion1467054034537_0 = (function() { var _ = Syndicate.__; return todo(id,title,completed); })();
 Syndicate.Actor.createFacet()
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(show(completed), 0); }), (function() { var _ = Syndicate.__; return { assertion: show(completed), metalevel: 0 }; }), (function() { 
-var _cachedAssertion1466612264870_1 = (function() { var _ = Syndicate.__; return show(completed); })();
+var _cachedAssertion1467054034537_1 = (function() { var _ = Syndicate.__; return show(completed); })();
 Syndicate.Actor.createFacet()
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(this.ui.html('.todo-list',Mustache.render(getTemplate(this.editing?'todo-list-item-edit-template':'todo-list-item-view-template'),{id:id,title:title,completed_class:completed?"completed":"",checked:completed?"checked":"",}),id), 0); }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_1, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_1, metalevel: 0 }; }), (function() {})).completeBuild(); }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_0, metalevel: 0 }; }), (function() {})).completeBuild(); }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_1, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_1, metalevel: 0 }; }), (function() {})).completeBuild(); }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_0, metalevel: 0 }; }), (function() {})).completeBuild(); }))
 .onEvent(false, "message", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(this.ui.event('.toggle','change',_), 0); }), (function() { var _ = Syndicate.__; return { assertion: this.ui.event('.toggle','change',(Syndicate._$("e"))), metalevel: 0 }; }), (function(e) {
         Syndicate.Dataspace.send(setCompleted(id, e.target.checked));
       }))
@@ -109,31 +109,31 @@ Syndicate.Actor.createFacet()
     (function () { 
 Syndicate.Actor.createFacet()
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(activeTodoCount(_), 0); }), (function() { var _ = Syndicate.__; return { assertion: activeTodoCount((Syndicate._$("count"))), metalevel: 0 }; }), (function(count) { 
-var _cachedAssertion1466612264870_2 = (function() { var _ = Syndicate.__; return activeTodoCount(count); })();
+var _cachedAssertion1467054034537_2 = (function() { var _ = Syndicate.__; return activeTodoCount(count); })();
 Syndicate.Actor.createFacet()
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(this.ui.context('count').html('.todo-count strong',''+count), 0); }))
 .addAssertion((function() { var _ = Syndicate.__; return (count !== 1) ? Syndicate.Patch.assert(this.ui.context('plural').html('.todo-count span.s','s'), 0) : Syndicate.Patch.emptyPatch; }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_2, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_2, metalevel: 0 }; }), (function() {})).completeBuild(); }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_2, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_2, metalevel: 0 }; }), (function() {})).completeBuild(); }))
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(totalTodoCount(0), 0); }), (function() { var _ = Syndicate.__; return { assertion: totalTodoCount(0), metalevel: 0 }; }), (function() { 
-var _cachedAssertion1466612264870_3 = (function() { var _ = Syndicate.__; return totalTodoCount(0); })();
+var _cachedAssertion1467054034537_3 = (function() { var _ = Syndicate.__; return totalTodoCount(0); })();
 Syndicate.Actor.createFacet()
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(Syndicate.UI.uiAttribute('section.main','class','hidden'), 0); }))
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(Syndicate.UI.uiAttribute('footer.footer','class','hidden'), 0); }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_3, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_3, metalevel: 0 }; }), (function() {})).completeBuild(); }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_3, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_3, metalevel: 0 }; }), (function() {})).completeBuild(); }))
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(completedTodoCount(0), 0); }), (function() { var _ = Syndicate.__; return { assertion: completedTodoCount(0), metalevel: 0 }; }), (function() { 
-var _cachedAssertion1466612264870_4 = (function() { var _ = Syndicate.__; return completedTodoCount(0); })();
+var _cachedAssertion1467054034537_4 = (function() { var _ = Syndicate.__; return completedTodoCount(0); })();
 Syndicate.Actor.createFacet()
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(Syndicate.UI.uiAttribute('button.clear-completed','class','hidden'), 0); }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_4, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_4, metalevel: 0 }; }), (function() {})).completeBuild(); }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_4, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_4, metalevel: 0 }; }), (function() {})).completeBuild(); }))
 .onEvent(false, "message", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.UI.globalEvent('button.clear-completed','click',_), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.UI.globalEvent('button.clear-completed','click',_), metalevel: 0 }; }), (function() {
         Syndicate.Dataspace.send(clearCompletedTodos());
       }))
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(allCompleted(), 0); }), (function() { var _ = Syndicate.__; return { assertion: allCompleted(), metalevel: 0 }; }), (function() { 
-var _cachedAssertion1466612264870_5 = (function() { var _ = Syndicate.__; return allCompleted(); })();
+var _cachedAssertion1467054034537_5 = (function() { var _ = Syndicate.__; return allCompleted(); })();
 Syndicate.Actor.createFacet()
 .addInitBlock((function() { Syndicate.Dataspace.send(Syndicate.UI.setProperty('.toggle-all', 'checked', true)); }))
 .addDoneBlock((function() { Syndicate.Dataspace.send(Syndicate.UI.setProperty('.toggle-all', 'checked', false)); }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_5, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_5, metalevel: 0 }; }), (function() {})).completeBuild(); }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_5, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_5, metalevel: 0 }; }), (function() {})).completeBuild(); }))
 .onEvent(false, "message", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.UI.globalEvent('.toggle-all','change',_), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.UI.globalEvent('.toggle-all','change',(Syndicate._$("e"))), metalevel: 0 }; }), (function(e) {
         Syndicate.Dataspace.send(setAllCompleted(e.target.checked));
       }))
@@ -159,26 +159,26 @@ Syndicate.Actor.createFacet()
     (function () { 
 Syndicate.Actor.createFacet()
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.UI.locationHash(_), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.UI.locationHash((Syndicate._$("hash"))), metalevel: 0 }; }), (function(hash) { 
-var _cachedAssertion1466612264870_6 = (function() { var _ = Syndicate.__; return Syndicate.UI.locationHash(hash); })();
+var _cachedAssertion1467054034537_6 = (function() { var _ = Syndicate.__; return Syndicate.UI.locationHash(hash); })();
 Syndicate.Actor.createFacet()
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(Syndicate.UI.uiAttribute('ul.filters > li > a[href="#'+hash+'"]','class','selected'), 0); }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_6, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_6, metalevel: 0 }; }), (function() {})).completeBuild(); }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_6, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_6, metalevel: 0 }; }), (function() {})).completeBuild(); }))
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.UI.locationHash('/'), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.UI.locationHash('/'), metalevel: 0 }; }), (function() { 
-var _cachedAssertion1466612264870_7 = (function() { var _ = Syndicate.__; return Syndicate.UI.locationHash('/'); })();
+var _cachedAssertion1467054034537_7 = (function() { var _ = Syndicate.__; return Syndicate.UI.locationHash('/'); })();
 Syndicate.Actor.createFacet()
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(show(true), 0); }))
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(show(false), 0); }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_7, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_7, metalevel: 0 }; }), (function() {})).completeBuild(); }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_7, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_7, metalevel: 0 }; }), (function() {})).completeBuild(); }))
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.UI.locationHash('/active'), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.UI.locationHash('/active'), metalevel: 0 }; }), (function() { 
-var _cachedAssertion1466612264870_8 = (function() { var _ = Syndicate.__; return Syndicate.UI.locationHash('/active'); })();
+var _cachedAssertion1467054034537_8 = (function() { var _ = Syndicate.__; return Syndicate.UI.locationHash('/active'); })();
 Syndicate.Actor.createFacet()
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(show(false), 0); }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_8, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_8, metalevel: 0 }; }), (function() {})).completeBuild(); }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_8, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_8, metalevel: 0 }; }), (function() {})).completeBuild(); }))
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.UI.locationHash('/completed'), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.UI.locationHash('/completed'), metalevel: 0 }; }), (function() { 
-var _cachedAssertion1466612264870_9 = (function() { var _ = Syndicate.__; return Syndicate.UI.locationHash('/completed'); })();
+var _cachedAssertion1467054034537_9 = (function() { var _ = Syndicate.__; return Syndicate.UI.locationHash('/completed'); })();
 Syndicate.Actor.createFacet()
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(show(true), 0); }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_9, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_9, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); })();
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_9, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_9, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); })();
   });
 
   Syndicate.Actor.spawnActor(new Object(), function() {
@@ -207,20 +207,20 @@ Syndicate.Actor.createFacet()
         todoListItemModel(db.nextId++, title, false);
       }))
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(_,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo((Syndicate._$("id")),_,_), metalevel: 0 }; }), (function(id) { 
-var _cachedAssertion1466612264870_10 = (function() { var _ = Syndicate.__; return todo(id,_,_); })();
+var _cachedAssertion1467054034537_10 = (function() { var _ = Syndicate.__; return todo(id,_,_); })();
 Syndicate.Actor.createFacet()
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(todo(id,_,_), 0); }), (function() { var _ = Syndicate.__; return { assertion: todo(id,(Syndicate._$("title")),(Syndicate._$("completed"))), metalevel: 0 }; }), (function(title, completed) { 
-var _cachedAssertion1466612264870_11 = (function() { var _ = Syndicate.__; return todo(id,title,completed); })();
+var _cachedAssertion1467054034537_11 = (function() { var _ = Syndicate.__; return todo(id,title,completed); })();
 Syndicate.Actor.createFacet()
 .addInitBlock((function() {
             db.todos[id] = {id: id, title: title, completed: completed};
             localStorage['todos-syndicate'] = JSON.stringify(db);
           }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_11, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_11, metalevel: 0 }; }), (function() {})).completeBuild(); }))
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_11, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_11, metalevel: 0 }; }), (function() {})).completeBuild(); }))
 .addDoneBlock((function() {
           delete db.todos[id];
           localStorage['todos-syndicate'] = JSON.stringify(db);
         }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1466612264870_10, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1466612264870_10, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); })();
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1467054034537_10, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1467054034537_10, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); })();
   });
 }).startStepping();
