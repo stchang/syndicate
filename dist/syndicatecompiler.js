@@ -143,7 +143,7 @@ var modifiedSourceActions = {
     return (init ? init.asES5 : '') + situations.asES5.join('') + (done ? done.asES5 : '');
   },
   FacetStateTransitionBlock: function(_leftParen, transitions, _rightParen) {
-    return transitions.asES5;
+    return transitions.asES5.join('');
   },
 
   FacetInitBlock: function(_init, block) {
@@ -240,7 +240,7 @@ function buildSubscription(children, patchMethod, mode, whenClause, cachedAssert
   if (cachedAssertionVar) {
     fragments.push(cachedAssertionVar);
   } else {
-    children.forEach(function (c) { c.buildSubscription(fragments, mode); });
+    children.forEach(function (c) { fragments.push(c.buildSubscription(mode)); });
   }
   if (patchMethod) {
     fragments.push(', ');
@@ -270,7 +270,7 @@ semantics.addAttribute('instantiatedAssertion', {
   _default: function(children) {
     var fragments = [];
     fragments.push('(function() { var _ = Syndicate.__; return ');
-    children.forEach(function (c) { c.buildSubscription(fragments, 'instantiated'); });
+    children.forEach(function (c) { fragments.push(c.buildSubscription('instantiated')); });
     fragments.push('; })()');
     return fragments.join('');
   }
@@ -309,43 +309,41 @@ semantics.addAttribute('metalevel', {
   }
 });
 
-semantics.addOperation('buildSubscription(acc,mode)', {
+semantics.addOperation('buildSubscription(mode)', {
   FacetEventPattern_messageEvent: function(_kw, pattern) {
-    pattern.buildSubscription(this.args.acc, this.args.mode);
+    return pattern.buildSubscription(this.args.mode);
   },
   FacetEventPattern_assertedEvent: function(_kw, pattern) {
-    pattern.buildSubscription(this.args.acc, this.args.mode);
+    return pattern.buildSubscription(this.args.mode);
   },
   FacetEventPattern_retractedEvent: function(_kw, pattern) {
-    pattern.buildSubscription(this.args.acc, this.args.mode);
+    return pattern.buildSubscription(this.args.mode);
   },
 
   FacetTransitionEventPattern_facetEvent: function (pattern) {
-    pattern.buildSubscription(this.args.acc, this.args.mode);
+    return pattern.buildSubscription(this.args.mode);
   },
 
   FacetPattern: function (v) {
-    v.children[0].buildSubscription(this.args.acc, this.args.mode); // both branches!
+    return v.children[0].buildSubscription(this.args.mode); // both branches!
   },
 
   AssignmentExpression_assignment: function (lhsExpr, _assignmentOperator, rhsExpr) {
     var i = lhsExpr.interval.contents;
     if (i[0] === '$' && i.length > 1) {
       switch (this.args.mode) {
-        case 'pattern': rhsExpr.buildSubscription(this.args.acc, this.args.mode); break;
-        case 'instantiated': lhsExpr.buildSubscription(this.args.acc, this.args.mode); break;
-        case 'projection': {
-          this.args.acc.push('(Syndicate._$(' + JSON.stringify(i.slice(1)) + ',');
-          rhsExpr.buildSubscription(this.args.acc, this.args.mode);
-          this.args.acc.push('))');
-          break;
-        }
+        case 'pattern': return rhsExpr.buildSubscription(this.args.mode);
+        case 'instantiated': return lhsExpr.buildSubscription(this.args.mode);
+        case 'projection':
+          return '(Syndicate._$(' + JSON.stringify(i.slice(1)) + ',' +
+            rhsExpr.buildSubscription(this.args.mode) +
+            '))';
         default: throw new Error('Unexpected buildSubscription mode ' + this.args.mode);
       }
     } else {
-      lhsExpr.buildSubscription(this.args.acc, this.args.mode);
-      _assignmentOperator.buildSubscription(this.args.acc, this.args.mode);
-      rhsExpr.buildSubscription(this.args.acc, this.args.mode);
+      return lhsExpr.buildSubscription(this.args.mode) +
+        _assignmentOperator.buildSubscription(this.args.mode) +
+        rhsExpr.buildSubscription(this.args.mode);
     }
   },
 
@@ -353,23 +351,24 @@ semantics.addOperation('buildSubscription(acc,mode)', {
     var i = this.interval.contents;
     if (i[0] === '$' && i.length > 1) {
       switch (this.args.mode) {
-        case 'pattern': this.args.acc.push('_'); break;
-        case 'instantiated': this.args.acc.push(i.slice(1)); break;
-        case 'projection': this.args.acc.push('(Syndicate._$(' + JSON.stringify(i.slice(1)) + '))'); break;
+        case 'pattern': return '_';
+        case 'instantiated': return i.slice(1);
+        case 'projection': return '(Syndicate._$(' + JSON.stringify(i.slice(1)) + '))';
         default: throw new Error('Unexpected buildSubscription mode ' + this.args.mode);
       }
     } else {
-      this.args.acc.push(i);
+      return i;
     }
   },
   _terminal: function() {
-    this.args.acc.push(this.interval.contents);
+    return undefined;
   },
   _nonterminal: function(children) {
     var self = this;
-    forEachChild(children, function (c) {
-      c.buildSubscription(self.args.acc, self.args.mode);
-    });
+    return ES5.translateNonterminalCode(children,
+                                        function(n) {
+                                          return n.buildSubscription(self.args.mode);
+                                        });
   }
 });
 
@@ -460,28 +459,33 @@ function compareByInterval(node, otherNode) {
   return node.interval.startIdx - otherNode.interval.startIdx;
 }
 
+function translateNonterminalCode(children, nodeTranslator) {
+  var flatChildren = flattenIterNodes(children).sort(compareByInterval);
+  var childResults = flatChildren.map(nodeTranslator);
+  if (flatChildren.length === 0 || childResults.every(isUndefined)) {
+    return undefined;
+  }
+  var code = '';
+  var interval = flatChildren[0].interval.collapsedLeft();
+  for (var i = 0; i < flatChildren.length; ++i) {
+    if (childResults[i] == null) {
+      // Grow the interval to include this node.
+      interval = interval.coverageWith(flatChildren[i].interval.collapsedRight());
+    } else {
+      interval = interval.coverageWith(flatChildren[i].interval.collapsedLeft());
+      code += interval.contents + childResults[i];
+      interval = flatChildren[i].interval.collapsedRight();
+    }
+  }
+  code += interval.contents;
+  return code;
+}
+
 // Semantic actions for the `modifiedSource` attribute (see below).
 var modifiedSourceActions = {
   _nonterminal: function(children) {
-    var flatChildren = flattenIterNodes(children).sort(compareByInterval);
-    var childResults = flatChildren.map(function(n) { return n.modifiedSource; });
-    if (flatChildren.length === 0 || childResults.every(isUndefined)) {
-      return undefined;
-    }
-    var code = '';
-    var interval = flatChildren[0].interval.collapsedLeft();
-    for (var i = 0; i < flatChildren.length; ++i) {
-      if (childResults[i] == null) {
-        // Grow the interval to include this node.
-        interval = interval.coverageWith(flatChildren[i].interval.collapsedRight());
-      } else {
-        interval = interval.coverageWith(flatChildren[i].interval.collapsedLeft());
-        code +=  interval.contents + childResults[i];
-        interval = flatChildren[i].interval.collapsedRight();
-      }
-    }
-    code += interval.contents;
-    return code;
+    return translateNonterminalCode(children,
+                                    function(n) { return n.modifiedSource; });
   },
   _iter: function(_) {
     throw new Error('_iter semantic action should never be hit');
@@ -510,7 +514,8 @@ semantics.addAttribute('asES5', {
 
 module.exports = {
   grammar: g,
-  semantics: semantics
+  semantics: semantics,
+  translateNonterminalCode: translateNonterminalCode
 };
 
 }).call(this,require("buffer").Buffer)
@@ -2796,106 +2801,15 @@ process.umask = function() { return 0; };
 
 },{}],10:[function(require,module,exports){
 var ohm = require('..');
-module.exports = ohm.makeRecipe(function() {
-  var decl = this.newGrammar("BuiltInRules")
-    .withSource("BuiltInRules {\n\n  alnum  (an alpha-numeric character)\n    = letter\n    | digit\n\n  letter  (a letter)\n    = lower\n    | upper\n    | unicodeLtmo\n\n  digit  (a digit)\n    = \"0\"..\"9\"\n\n  hexDigit  (a hexadecimal digit)\n    = digit\n    | \"a\"..\"f\"\n    | \"A\"..\"F\"\n\n  ListOf<elem, sep>\n    = NonemptyListOf<elem, sep>\n    | EmptyListOf<elem, sep>\n\n  NonemptyListOf<elem, sep>\n    = elem (sep elem)*\n\n  EmptyListOf<elem, sep>\n    = /* nothing */\n\n  listOf<elem, sep>\n    = nonemptyListOf<elem, sep>\n    | emptyListOf<elem, sep>\n\n  nonemptyListOf<elem, sep>\n    = elem (sep elem)*\n\n  emptyListOf<elem, sep>\n    = /* nothing */\n\n}")
-  return decl
-    .define("alnum", [], this.alt(this.app("letter").withInterval(decl.sourceInterval(60, 66)), this.app("digit").withInterval(decl.sourceInterval(73, 78))).withInterval(decl.sourceInterval(60, 78)), "an alpha-numeric character")
-    .define("letter", [], this.alt(this.app("lower").withInterval(decl.sourceInterval(107, 112)), this.app("upper").withInterval(decl.sourceInterval(119, 124)), this.app("unicodeLtmo").withInterval(decl.sourceInterval(131, 142))).withInterval(decl.sourceInterval(107, 142)), "a letter")
-    .define("digit", [], this.range("0", "9").withInterval(decl.sourceInterval(169, 177)), "a digit")
-    .define("hexDigit", [], this.alt(this.app("digit").withInterval(decl.sourceInterval(219, 224)), this.range("a", "f").withInterval(decl.sourceInterval(231, 239)), this.range("A", "F").withInterval(decl.sourceInterval(246, 254))).withInterval(decl.sourceInterval(219, 254)), "a hexadecimal digit")
-    .define("ListOf", ["elem", "sep"], this.alt(this.app("NonemptyListOf", [this.param(0), this.param(1)]).withInterval(decl.sourceInterval(282, 307)), this.app("EmptyListOf", [this.param(0), this.param(1)]).withInterval(decl.sourceInterval(314, 336))).withInterval(decl.sourceInterval(282, 336)))
-    .define("NonemptyListOf", ["elem", "sep"], this.seq(this.param(0), this.star(this.seq(this.param(1), this.param(0)).withInterval(decl.sourceInterval(378, 386))).withInterval(decl.sourceInterval(377, 388))).withInterval(decl.sourceInterval(372, 388)))
-    .define("EmptyListOf", ["elem", "sep"], this.seq().withInterval(decl.sourceInterval(438, 438)))
-    .define("listOf", ["elem", "sep"], this.alt(this.app("nonemptyListOf", [this.param(0), this.param(1)]).withInterval(decl.sourceInterval(462, 487)), this.app("emptyListOf", [this.param(0), this.param(1)]).withInterval(decl.sourceInterval(494, 516))).withInterval(decl.sourceInterval(462, 516)))
-    .define("nonemptyListOf", ["elem", "sep"], this.seq(this.param(0), this.star(this.seq(this.param(1), this.param(0)).withInterval(decl.sourceInterval(558, 566))).withInterval(decl.sourceInterval(557, 568))).withInterval(decl.sourceInterval(552, 568)))
-    .define("emptyListOf", ["elem", "sep"], this.seq().withInterval(decl.sourceInterval(616, 616)))
-    .build();
-});
-
+module.exports = ohm.makeRecipe(["grammar",{"source":"BuiltInRules {\n\n  alnum  (an alpha-numeric character)\n    = letter\n    | digit\n\n  letter  (a letter)\n    = lower\n    | upper\n    | unicodeLtmo\n\n  digit  (a digit)\n    = \"0\"..\"9\"\n\n  hexDigit  (a hexadecimal digit)\n    = digit\n    | \"a\"..\"f\"\n    | \"A\"..\"F\"\n\n  ListOf<elem, sep>\n    = NonemptyListOf<elem, sep>\n    | EmptyListOf<elem, sep>\n\n  NonemptyListOf<elem, sep>\n    = elem (sep elem)*\n\n  EmptyListOf<elem, sep>\n    = /* nothing */\n\n  listOf<elem, sep>\n    = nonemptyListOf<elem, sep>\n    | emptyListOf<elem, sep>\n\n  nonemptyListOf<elem, sep>\n    = elem (sep elem)*\n\n  emptyListOf<elem, sep>\n    = /* nothing */\n\n}"},"BuiltInRules",null,null,{"alnum":["define",{"sourceInterval":[18,78]},"an alpha-numeric character",[],["alt",{"sourceInterval":[60,78]},["app",{"sourceInterval":[60,66]},"letter",[]],["app",{"sourceInterval":[73,78]},"digit",[]]]],"letter":["define",{"sourceInterval":[82,142]},"a letter",[],["alt",{"sourceInterval":[107,142]},["app",{"sourceInterval":[107,112]},"lower",[]],["app",{"sourceInterval":[119,124]},"upper",[]],["app",{"sourceInterval":[131,142]},"unicodeLtmo",[]]]],"digit":["define",{"sourceInterval":[146,177]},"a digit",[],["range",{"sourceInterval":[169,177]},"0","9"]],"hexDigit":["define",{"sourceInterval":[181,254]},"a hexadecimal digit",[],["alt",{"sourceInterval":[219,254]},["app",{"sourceInterval":[219,224]},"digit",[]],["range",{"sourceInterval":[231,239]},"a","f"],["range",{"sourceInterval":[246,254]},"A","F"]]],"ListOf":["define",{"sourceInterval":[258,336]},null,["elem","sep"],["alt",{"sourceInterval":[282,336]},["app",{"sourceInterval":[282,307]},"NonemptyListOf",[["param",{},0],["param",{},1]]],["app",{"sourceInterval":[314,336]},"EmptyListOf",[["param",{},0],["param",{},1]]]]],"NonemptyListOf":["define",{"sourceInterval":[340,388]},null,["elem","sep"],["seq",{"sourceInterval":[372,388]},["param",{},0],["star",{"sourceInterval":[377,388]},["seq",{"sourceInterval":[378,386]},["param",{},1],["param",{},0]]]]],"EmptyListOf":["define",{"sourceInterval":[392,434]},null,["elem","sep"],["seq",{"sourceInterval":[438,438]}]],"listOf":["define",{"sourceInterval":[438,516]},null,["elem","sep"],["alt",{"sourceInterval":[462,516]},["app",{"sourceInterval":[462,487]},"nonemptyListOf",[["param",{},0],["param",{},1]]],["app",{"sourceInterval":[494,516]},"emptyListOf",[["param",{},0],["param",{},1]]]]],"nonemptyListOf":["define",{"sourceInterval":[520,568]},null,["elem","sep"],["seq",{"sourceInterval":[552,568]},["param",{},0],["star",{"sourceInterval":[557,568]},["seq",{"sourceInterval":[558,566]},["param",{},1],["param",{},0]]]]],"emptyListOf":["define",{"sourceInterval":[572,614]},null,["elem","sep"],["seq",{"sourceInterval":[616,616]}]]}]);
 
 },{"..":50}],11:[function(require,module,exports){
 var ohm = require('..');
-module.exports = ohm.makeRecipe(function() {
-  var decl = this.newGrammar("Ohm")
-    .withSource("Ohm {\n\n  Grammars\n    = Grammar*\n\n  Grammar\n    = ident SuperGrammar? \"{\" Rule* \"}\"\n\n  SuperGrammar\n    = \"<:\" ident\n\n  Rule\n    = ident Formals? ruleDescr? \"=\"  RuleBody  -- define\n    | ident Formals?            \":=\" RuleBody  -- override\n    | ident Formals?            \"+=\" RuleBody  -- extend\n\n  RuleBody\n    = \"|\"? TopLevelTerm (\"|\" TopLevelTerm)*\n\n  TopLevelTerm\n    = Seq caseName  -- inline\n    | Seq\n\n  Formals\n    = \"<\" ListOf<ident, \",\"> \">\"\n\n  Params\n    = \"<\" ListOf<Seq, \",\"> \">\"\n\n  Alt\n    = Seq (\"|\" Seq)*\n\n  Seq\n    = Iter*\n\n  Iter\n    = Pred \"*\"  -- star\n    | Pred \"+\"  -- plus\n    | Pred \"?\"  -- opt\n    | Pred\n\n  Pred\n    = \"~\" Lex  -- not\n    | \"&\" Lex  -- lookahead\n    | Lex\n\n  Lex\n    = \"#\" Base  -- lex\n    | Base\n\n  Base\n    = ident Params? ~(ruleDescr? \"=\" | \":=\" | \"+=\")  -- application\n    | terminal \"..\" terminal                         -- range\n    | terminal                                       -- terminal\n    | \"(\" Alt \")\"                                    -- paren\n\n  ruleDescr  (a rule description)\n    = \"(\" ruleDescrText \")\"\n\n  ruleDescrText\n    = (~\")\" any)*\n\n  caseName\n    = \"--\" (~\"\\n\" space)* name (~\"\\n\" space)* (\"\\n\" | &\"}\")\n\n  name  (a name)\n    = nameFirst nameRest*\n\n  nameFirst\n    = \"_\"\n    | letter\n\n  nameRest\n    = \"_\"\n    | alnum\n\n  ident  (an identifier)\n    = name\n\n  terminal\n    = \"\\\"\" terminalChar* \"\\\"\"\n\n  terminalChar\n    = escapeChar\n    | ~\"\\\\\" ~\"\\\"\" ~\"\\n\" any\n\n  escapeChar  (an escape sequence)\n    = \"\\\\\\\\\"                                     -- backslash\n    | \"\\\\\\\"\"                                     -- doubleQuote\n    | \"\\\\\\'\"                                     -- singleQuote\n    | \"\\\\b\"                                      -- backspace\n    | \"\\\\n\"                                      -- lineFeed\n    | \"\\\\r\"                                      -- carriageReturn\n    | \"\\\\t\"                                      -- tab\n    | \"\\\\u\" hexDigit hexDigit hexDigit hexDigit  -- unicodeEscape\n    | \"\\\\x\" hexDigit hexDigit                    -- hexEscape\n\n  space\n   += comment\n\n  comment\n    = \"//\" (~\"\\n\" any)* \"\\n\"  -- singleLine\n    | \"/*\" (~\"*/\" any)* \"*/\"  -- multiLine\n\n  tokens = token*\n\n  token = caseName | comment | ident | operator | punctuation | terminal | any\n\n  operator = \"<:\" | \"=\" | \":=\" | \"+=\" | \"*\" | \"+\" | \"?\" | \"~\" | \"&\"\n\n  punctuation = \"<\" | \">\" | \",\" | \"--\"\n}")
-    .withDefaultStartRule("Grammars")
-  return decl
-    .define("Grammars", [], this.star(this.app("Grammar").withInterval(decl.sourceInterval(24, 31))).withInterval(decl.sourceInterval(24, 32)))
-    .define("Grammar", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(50, 55)), this.opt(this.app("SuperGrammar").withInterval(decl.sourceInterval(56, 68))).withInterval(decl.sourceInterval(56, 69)), this.terminal("{").withInterval(decl.sourceInterval(70, 73)), this.star(this.app("Rule").withInterval(decl.sourceInterval(74, 78))).withInterval(decl.sourceInterval(74, 79)), this.terminal("}").withInterval(decl.sourceInterval(80, 83))).withInterval(decl.sourceInterval(50, 83)))
-    .define("SuperGrammar", [], this.seq(this.terminal("<:").withInterval(decl.sourceInterval(106, 110)), this.app("ident").withInterval(decl.sourceInterval(111, 116))).withInterval(decl.sourceInterval(106, 116)))
-    .define("Rule_define", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(131, 136)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(137, 144))).withInterval(decl.sourceInterval(137, 145)), this.opt(this.app("ruleDescr").withInterval(decl.sourceInterval(146, 155))).withInterval(decl.sourceInterval(146, 156)), this.terminal("=").withInterval(decl.sourceInterval(157, 160)), this.app("RuleBody").withInterval(decl.sourceInterval(162, 170))).withInterval(decl.sourceInterval(131, 170)))
-    .define("Rule_override", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(188, 193)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(194, 201))).withInterval(decl.sourceInterval(194, 202)), this.terminal(":=").withInterval(decl.sourceInterval(214, 218)), this.app("RuleBody").withInterval(decl.sourceInterval(219, 227))).withInterval(decl.sourceInterval(188, 227)))
-    .define("Rule_extend", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(247, 252)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(253, 260))).withInterval(decl.sourceInterval(253, 261)), this.terminal("+=").withInterval(decl.sourceInterval(273, 277)), this.app("RuleBody").withInterval(decl.sourceInterval(278, 286))).withInterval(decl.sourceInterval(247, 286)))
-    .define("Rule", [], this.alt(this.app("Rule_define").withInterval(decl.sourceInterval(131, 170)), this.app("Rule_override").withInterval(decl.sourceInterval(188, 227)), this.app("Rule_extend").withInterval(decl.sourceInterval(247, 286))).withInterval(decl.sourceInterval(131, 297)))
-    .define("RuleBody", [], this.seq(this.opt(this.terminal("|").withInterval(decl.sourceInterval(316, 319))).withInterval(decl.sourceInterval(316, 320)), this.app("TopLevelTerm").withInterval(decl.sourceInterval(321, 333)), this.star(this.seq(this.terminal("|").withInterval(decl.sourceInterval(335, 338)), this.app("TopLevelTerm").withInterval(decl.sourceInterval(339, 351))).withInterval(decl.sourceInterval(335, 351))).withInterval(decl.sourceInterval(334, 353))).withInterval(decl.sourceInterval(316, 353)))
-    .define("TopLevelTerm_inline", [], this.seq(this.app("Seq").withInterval(decl.sourceInterval(376, 379)), this.app("caseName").withInterval(decl.sourceInterval(380, 388))).withInterval(decl.sourceInterval(376, 388)))
-    .define("TopLevelTerm", [], this.alt(this.app("TopLevelTerm_inline").withInterval(decl.sourceInterval(376, 388)), this.app("Seq").withInterval(decl.sourceInterval(406, 409))).withInterval(decl.sourceInterval(376, 409)))
-    .define("Formals", [], this.seq(this.terminal("<").withInterval(decl.sourceInterval(427, 430)), this.app("ListOf", [this.app("ident").withInterval(decl.sourceInterval(438, 443)), this.terminal(",").withInterval(decl.sourceInterval(445, 448))]).withInterval(decl.sourceInterval(431, 449)), this.terminal(">").withInterval(decl.sourceInterval(450, 453))).withInterval(decl.sourceInterval(427, 453)))
-    .define("Params", [], this.seq(this.terminal("<").withInterval(decl.sourceInterval(470, 473)), this.app("ListOf", [this.app("Seq").withInterval(decl.sourceInterval(481, 484)), this.terminal(",").withInterval(decl.sourceInterval(486, 489))]).withInterval(decl.sourceInterval(474, 490)), this.terminal(">").withInterval(decl.sourceInterval(491, 494))).withInterval(decl.sourceInterval(470, 494)))
-    .define("Alt", [], this.seq(this.app("Seq").withInterval(decl.sourceInterval(508, 511)), this.star(this.seq(this.terminal("|").withInterval(decl.sourceInterval(513, 516)), this.app("Seq").withInterval(decl.sourceInterval(517, 520))).withInterval(decl.sourceInterval(513, 520))).withInterval(decl.sourceInterval(512, 522))).withInterval(decl.sourceInterval(508, 522)))
-    .define("Seq", [], this.star(this.app("Iter").withInterval(decl.sourceInterval(536, 540))).withInterval(decl.sourceInterval(536, 541)))
-    .define("Iter_star", [], this.seq(this.app("Pred").withInterval(decl.sourceInterval(556, 560)), this.terminal("*").withInterval(decl.sourceInterval(561, 564))).withInterval(decl.sourceInterval(556, 564)))
-    .define("Iter_plus", [], this.seq(this.app("Pred").withInterval(decl.sourceInterval(580, 584)), this.terminal("+").withInterval(decl.sourceInterval(585, 588))).withInterval(decl.sourceInterval(580, 588)))
-    .define("Iter_opt", [], this.seq(this.app("Pred").withInterval(decl.sourceInterval(604, 608)), this.terminal("?").withInterval(decl.sourceInterval(609, 612))).withInterval(decl.sourceInterval(604, 612)))
-    .define("Iter", [], this.alt(this.app("Iter_star").withInterval(decl.sourceInterval(556, 564)), this.app("Iter_plus").withInterval(decl.sourceInterval(580, 588)), this.app("Iter_opt").withInterval(decl.sourceInterval(604, 612)), this.app("Pred").withInterval(decl.sourceInterval(627, 631))).withInterval(decl.sourceInterval(556, 631)))
-    .define("Pred_not", [], this.seq(this.terminal("~").withInterval(decl.sourceInterval(646, 649)), this.app("Lex").withInterval(decl.sourceInterval(650, 653))).withInterval(decl.sourceInterval(646, 653)))
-    .define("Pred_lookahead", [], this.seq(this.terminal("&").withInterval(decl.sourceInterval(668, 671)), this.app("Lex").withInterval(decl.sourceInterval(672, 675))).withInterval(decl.sourceInterval(668, 675)))
-    .define("Pred", [], this.alt(this.app("Pred_not").withInterval(decl.sourceInterval(646, 653)), this.app("Pred_lookahead").withInterval(decl.sourceInterval(668, 675)), this.app("Lex").withInterval(decl.sourceInterval(696, 699))).withInterval(decl.sourceInterval(646, 699)))
-    .define("Lex_lex", [], this.seq(this.terminal("#").withInterval(decl.sourceInterval(713, 716)), this.app("Base").withInterval(decl.sourceInterval(717, 721))).withInterval(decl.sourceInterval(713, 721)))
-    .define("Lex", [], this.alt(this.app("Lex_lex").withInterval(decl.sourceInterval(713, 721)), this.app("Base").withInterval(decl.sourceInterval(736, 740))).withInterval(decl.sourceInterval(713, 740)))
-    .define("Base_application", [], this.seq(this.app("ident").withInterval(decl.sourceInterval(755, 760)), this.opt(this.app("Params").withInterval(decl.sourceInterval(761, 767))).withInterval(decl.sourceInterval(761, 768)), this.not(this.alt(this.seq(this.opt(this.app("ruleDescr").withInterval(decl.sourceInterval(771, 780))).withInterval(decl.sourceInterval(771, 781)), this.terminal("=").withInterval(decl.sourceInterval(782, 785))).withInterval(decl.sourceInterval(771, 785)), this.terminal(":=").withInterval(decl.sourceInterval(788, 792)), this.terminal("+=").withInterval(decl.sourceInterval(795, 799))).withInterval(decl.sourceInterval(771, 799))).withInterval(decl.sourceInterval(769, 800))).withInterval(decl.sourceInterval(755, 800)))
-    .define("Base_range", [], this.seq(this.app("terminal").withInterval(decl.sourceInterval(823, 831)), this.terminal("..").withInterval(decl.sourceInterval(832, 836)), this.app("terminal").withInterval(decl.sourceInterval(837, 845))).withInterval(decl.sourceInterval(823, 845)))
-    .define("Base_terminal", [], this.app("terminal").withInterval(decl.sourceInterval(885, 893)))
-    .define("Base_paren", [], this.seq(this.terminal("(").withInterval(decl.sourceInterval(950, 953)), this.app("Alt").withInterval(decl.sourceInterval(954, 957)), this.terminal(")").withInterval(decl.sourceInterval(958, 961))).withInterval(decl.sourceInterval(950, 961)))
-    .define("Base", [], this.alt(this.app("Base_application").withInterval(decl.sourceInterval(755, 800)), this.app("Base_range").withInterval(decl.sourceInterval(823, 845)), this.app("Base_terminal").withInterval(decl.sourceInterval(885, 893)), this.app("Base_paren").withInterval(decl.sourceInterval(950, 961))).withInterval(decl.sourceInterval(755, 1005)))
-    .define("ruleDescr", [], this.seq(this.terminal("(").withInterval(decl.sourceInterval(1047, 1050)), this.app("ruleDescrText").withInterval(decl.sourceInterval(1051, 1064)), this.terminal(")").withInterval(decl.sourceInterval(1065, 1068))).withInterval(decl.sourceInterval(1047, 1068)), "a rule description")
-    .define("ruleDescrText", [], this.star(this.seq(this.not(this.terminal(")").withInterval(decl.sourceInterval(1094, 1097))).withInterval(decl.sourceInterval(1093, 1097)), this.app("any").withInterval(decl.sourceInterval(1098, 1101))).withInterval(decl.sourceInterval(1093, 1101))).withInterval(decl.sourceInterval(1092, 1103)))
-    .define("caseName", [], this.seq(this.terminal("--").withInterval(decl.sourceInterval(1122, 1126)), this.star(this.seq(this.not(this.terminal("\n").withInterval(decl.sourceInterval(1129, 1133))).withInterval(decl.sourceInterval(1128, 1133)), this.app("space").withInterval(decl.sourceInterval(1134, 1139))).withInterval(decl.sourceInterval(1128, 1139))).withInterval(decl.sourceInterval(1127, 1141)), this.app("name").withInterval(decl.sourceInterval(1142, 1146)), this.star(this.seq(this.not(this.terminal("\n").withInterval(decl.sourceInterval(1149, 1153))).withInterval(decl.sourceInterval(1148, 1153)), this.app("space").withInterval(decl.sourceInterval(1154, 1159))).withInterval(decl.sourceInterval(1148, 1159))).withInterval(decl.sourceInterval(1147, 1161)), this.alt(this.terminal("\n").withInterval(decl.sourceInterval(1163, 1167)), this.la(this.terminal("}").withInterval(decl.sourceInterval(1171, 1174))).withInterval(decl.sourceInterval(1170, 1174))).withInterval(decl.sourceInterval(1163, 1174))).withInterval(decl.sourceInterval(1122, 1175)))
-    .define("name", [], this.seq(this.app("nameFirst").withInterval(decl.sourceInterval(1200, 1209)), this.star(this.app("nameRest").withInterval(decl.sourceInterval(1210, 1218))).withInterval(decl.sourceInterval(1210, 1219))).withInterval(decl.sourceInterval(1200, 1219)), "a name")
-    .define("nameFirst", [], this.alt(this.terminal("_").withInterval(decl.sourceInterval(1239, 1242)), this.app("letter").withInterval(decl.sourceInterval(1249, 1255))).withInterval(decl.sourceInterval(1239, 1255)))
-    .define("nameRest", [], this.alt(this.terminal("_").withInterval(decl.sourceInterval(1274, 1277)), this.app("alnum").withInterval(decl.sourceInterval(1284, 1289))).withInterval(decl.sourceInterval(1274, 1289)))
-    .define("ident", [], this.app("name").withInterval(decl.sourceInterval(1322, 1326)), "an identifier")
-    .define("terminal", [], this.seq(this.terminal("\"").withInterval(decl.sourceInterval(1345, 1349)), this.star(this.app("terminalChar").withInterval(decl.sourceInterval(1350, 1362))).withInterval(decl.sourceInterval(1350, 1363)), this.terminal("\"").withInterval(decl.sourceInterval(1364, 1368))).withInterval(decl.sourceInterval(1345, 1368)))
-    .define("terminalChar", [], this.alt(this.app("escapeChar").withInterval(decl.sourceInterval(1391, 1401)), this.seq(this.not(this.terminal("\\").withInterval(decl.sourceInterval(1409, 1413))).withInterval(decl.sourceInterval(1408, 1413)), this.not(this.terminal("\"").withInterval(decl.sourceInterval(1415, 1419))).withInterval(decl.sourceInterval(1414, 1419)), this.not(this.terminal("\n").withInterval(decl.sourceInterval(1421, 1425))).withInterval(decl.sourceInterval(1420, 1425)), this.app("any").withInterval(decl.sourceInterval(1426, 1429))).withInterval(decl.sourceInterval(1408, 1429))).withInterval(decl.sourceInterval(1391, 1429)))
-    .define("escapeChar_backslash", [], this.terminal("\\\\").withInterval(decl.sourceInterval(1472, 1478)))
-    .define("escapeChar_doubleQuote", [], this.terminal("\\\"").withInterval(decl.sourceInterval(1534, 1540)))
-    .define("escapeChar_singleQuote", [], this.terminal("\\'").withInterval(decl.sourceInterval(1598, 1604)))
-    .define("escapeChar_backspace", [], this.terminal("\\b").withInterval(decl.sourceInterval(1662, 1667)))
-    .define("escapeChar_lineFeed", [], this.terminal("\\n").withInterval(decl.sourceInterval(1724, 1729)))
-    .define("escapeChar_carriageReturn", [], this.terminal("\\r").withInterval(decl.sourceInterval(1785, 1790)))
-    .define("escapeChar_tab", [], this.terminal("\\t").withInterval(decl.sourceInterval(1852, 1857)))
-    .define("escapeChar_unicodeEscape", [], this.seq(this.terminal("\\u").withInterval(decl.sourceInterval(1908, 1913)), this.app("hexDigit").withInterval(decl.sourceInterval(1914, 1922)), this.app("hexDigit").withInterval(decl.sourceInterval(1923, 1931)), this.app("hexDigit").withInterval(decl.sourceInterval(1932, 1940)), this.app("hexDigit").withInterval(decl.sourceInterval(1941, 1949))).withInterval(decl.sourceInterval(1908, 1949)))
-    .define("escapeChar_hexEscape", [], this.seq(this.terminal("\\x").withInterval(decl.sourceInterval(1974, 1979)), this.app("hexDigit").withInterval(decl.sourceInterval(1980, 1988)), this.app("hexDigit").withInterval(decl.sourceInterval(1989, 1997))).withInterval(decl.sourceInterval(1974, 1997)))
-    .define("escapeChar", [], this.alt(this.app("escapeChar_backslash").withInterval(decl.sourceInterval(1472, 1478)), this.app("escapeChar_doubleQuote").withInterval(decl.sourceInterval(1534, 1540)), this.app("escapeChar_singleQuote").withInterval(decl.sourceInterval(1598, 1604)), this.app("escapeChar_backspace").withInterval(decl.sourceInterval(1662, 1667)), this.app("escapeChar_lineFeed").withInterval(decl.sourceInterval(1724, 1729)), this.app("escapeChar_carriageReturn").withInterval(decl.sourceInterval(1785, 1790)), this.app("escapeChar_tab").withInterval(decl.sourceInterval(1852, 1857)), this.app("escapeChar_unicodeEscape").withInterval(decl.sourceInterval(1908, 1949)), this.app("escapeChar_hexEscape").withInterval(decl.sourceInterval(1974, 1997))).withInterval(decl.sourceInterval(1472, 2029)), "an escape sequence")
-    .extend("space", [], this.app("comment").withInterval(decl.sourceInterval(2045, 2052)))
-    .define("comment_singleLine", [], this.seq(this.terminal("//").withInterval(decl.sourceInterval(2070, 2074)), this.star(this.seq(this.not(this.terminal("\n").withInterval(decl.sourceInterval(2077, 2081))).withInterval(decl.sourceInterval(2076, 2081)), this.app("any").withInterval(decl.sourceInterval(2082, 2085))).withInterval(decl.sourceInterval(2076, 2085))).withInterval(decl.sourceInterval(2075, 2087)), this.terminal("\n").withInterval(decl.sourceInterval(2088, 2092))).withInterval(decl.sourceInterval(2070, 2092)))
-    .define("comment_multiLine", [], this.seq(this.terminal("/*").withInterval(decl.sourceInterval(2114, 2118)), this.star(this.seq(this.not(this.terminal("*/").withInterval(decl.sourceInterval(2121, 2125))).withInterval(decl.sourceInterval(2120, 2125)), this.app("any").withInterval(decl.sourceInterval(2126, 2129))).withInterval(decl.sourceInterval(2120, 2129))).withInterval(decl.sourceInterval(2119, 2131)), this.terminal("*/").withInterval(decl.sourceInterval(2132, 2136))).withInterval(decl.sourceInterval(2114, 2136)))
-    .define("comment", [], this.alt(this.app("comment_singleLine").withInterval(decl.sourceInterval(2070, 2092)), this.app("comment_multiLine").withInterval(decl.sourceInterval(2114, 2136))).withInterval(decl.sourceInterval(2070, 2150)))
-    .define("tokens", [], this.star(this.app("token").withInterval(decl.sourceInterval(2163, 2168))).withInterval(decl.sourceInterval(2163, 2169)))
-    .define("token", [], this.alt(this.app("caseName").withInterval(decl.sourceInterval(2181, 2189)), this.app("comment").withInterval(decl.sourceInterval(2192, 2199)), this.app("ident").withInterval(decl.sourceInterval(2202, 2207)), this.app("operator").withInterval(decl.sourceInterval(2210, 2218)), this.app("punctuation").withInterval(decl.sourceInterval(2221, 2232)), this.app("terminal").withInterval(decl.sourceInterval(2235, 2243)), this.app("any").withInterval(decl.sourceInterval(2246, 2249))).withInterval(decl.sourceInterval(2181, 2249)))
-    .define("operator", [], this.alt(this.terminal("<:").withInterval(decl.sourceInterval(2264, 2268)), this.terminal("=").withInterval(decl.sourceInterval(2271, 2274)), this.terminal(":=").withInterval(decl.sourceInterval(2277, 2281)), this.terminal("+=").withInterval(decl.sourceInterval(2284, 2288)), this.terminal("*").withInterval(decl.sourceInterval(2291, 2294)), this.terminal("+").withInterval(decl.sourceInterval(2297, 2300)), this.terminal("?").withInterval(decl.sourceInterval(2303, 2306)), this.terminal("~").withInterval(decl.sourceInterval(2309, 2312)), this.terminal("&").withInterval(decl.sourceInterval(2315, 2318))).withInterval(decl.sourceInterval(2264, 2318)))
-    .define("punctuation", [], this.alt(this.terminal("<").withInterval(decl.sourceInterval(2336, 2339)), this.terminal(">").withInterval(decl.sourceInterval(2342, 2345)), this.terminal(",").withInterval(decl.sourceInterval(2348, 2351)), this.terminal("--").withInterval(decl.sourceInterval(2354, 2358))).withInterval(decl.sourceInterval(2336, 2358)))
-    .build();
-});
-
+module.exports = ohm.makeRecipe(["grammar",{"source":"Ohm {\n\n  Grammars\n    = Grammar*\n\n  Grammar\n    = ident SuperGrammar? \"{\" Rule* \"}\"\n\n  SuperGrammar\n    = \"<:\" ident\n\n  Rule\n    = ident Formals? ruleDescr? \"=\"  RuleBody  -- define\n    | ident Formals?            \":=\" RuleBody  -- override\n    | ident Formals?            \"+=\" RuleBody  -- extend\n\n  RuleBody\n    = \"|\"? NonemptyListOf<TopLevelTerm, \"|\">\n\n  TopLevelTerm\n    = Seq caseName  -- inline\n    | Seq\n\n  Formals\n    = \"<\" ListOf<ident, \",\"> \">\"\n\n  Params\n    = \"<\" ListOf<Seq, \",\"> \">\"\n\n  Alt\n    = NonemptyListOf<Seq, \"|\">\n\n  Seq\n    = Iter*\n\n  Iter\n    = Pred \"*\"  -- star\n    | Pred \"+\"  -- plus\n    | Pred \"?\"  -- opt\n    | Pred\n\n  Pred\n    = \"~\" Lex  -- not\n    | \"&\" Lex  -- lookahead\n    | Lex\n\n  Lex\n    = \"#\" Base  -- lex\n    | Base\n\n  Base\n    = ident Params? ~(ruleDescr? \"=\" | \":=\" | \"+=\")  -- application\n    | terminal \"..\" terminal                         -- range\n    | terminal                                       -- terminal\n    | \"(\" Alt \")\"                                    -- paren\n\n  ruleDescr  (a rule description)\n    = \"(\" ruleDescrText \")\"\n\n  ruleDescrText\n    = (~\")\" any)*\n\n  caseName\n    = \"--\" (~\"\\n\" space)* name (~\"\\n\" space)* (\"\\n\" | &\"}\")\n\n  name  (a name)\n    = nameFirst nameRest*\n\n  nameFirst\n    = \"_\"\n    | letter\n\n  nameRest\n    = \"_\"\n    | alnum\n\n  ident  (an identifier)\n    = name\n\n  terminal\n    = \"\\\"\" terminalChar* \"\\\"\"\n\n  terminalChar\n    = escapeChar\n    | ~\"\\\\\" ~\"\\\"\" ~\"\\n\" any\n\n  escapeChar  (an escape sequence)\n    = \"\\\\\\\\\"                                     -- backslash\n    | \"\\\\\\\"\"                                     -- doubleQuote\n    | \"\\\\\\'\"                                     -- singleQuote\n    | \"\\\\b\"                                      -- backspace\n    | \"\\\\n\"                                      -- lineFeed\n    | \"\\\\r\"                                      -- carriageReturn\n    | \"\\\\t\"                                      -- tab\n    | \"\\\\u\" hexDigit hexDigit hexDigit hexDigit  -- unicodeEscape\n    | \"\\\\x\" hexDigit hexDigit                    -- hexEscape\n\n  space\n   += comment\n\n  comment\n    = \"//\" (~\"\\n\" any)* \"\\n\"  -- singleLine\n    | \"/*\" (~\"*/\" any)* \"*/\"  -- multiLine\n\n  tokens = token*\n\n  token = caseName | comment | ident | operator | punctuation | terminal | any\n\n  operator = \"<:\" | \"=\" | \":=\" | \"+=\" | \"*\" | \"+\" | \"?\" | \"~\" | \"&\"\n\n  punctuation = \"<\" | \">\" | \",\" | \"--\"\n}"},"Ohm",null,"Grammars",{"Grammars":["define",{"sourceInterval":[9,32]},null,[],["star",{"sourceInterval":[24,32]},["app",{"sourceInterval":[24,31]},"Grammar",[]]]],"Grammar":["define",{"sourceInterval":[36,83]},null,[],["seq",{"sourceInterval":[50,83]},["app",{"sourceInterval":[50,55]},"ident",[]],["opt",{"sourceInterval":[56,69]},["app",{"sourceInterval":[56,68]},"SuperGrammar",[]]],["terminal",{"sourceInterval":[70,73]},"{"],["star",{"sourceInterval":[74,79]},["app",{"sourceInterval":[74,78]},"Rule",[]]],["terminal",{"sourceInterval":[80,83]},"}"]]],"SuperGrammar":["define",{"sourceInterval":[87,116]},null,[],["seq",{"sourceInterval":[106,116]},["terminal",{"sourceInterval":[106,110]},"<:"],["app",{"sourceInterval":[111,116]},"ident",[]]]],"Rule_define":["define",{"sourceInterval":[131,181]},null,[],["seq",{"sourceInterval":[131,170]},["app",{"sourceInterval":[131,136]},"ident",[]],["opt",{"sourceInterval":[137,145]},["app",{"sourceInterval":[137,144]},"Formals",[]]],["opt",{"sourceInterval":[146,156]},["app",{"sourceInterval":[146,155]},"ruleDescr",[]]],["terminal",{"sourceInterval":[157,160]},"="],["app",{"sourceInterval":[162,170]},"RuleBody",[]]]],"Rule_override":["define",{"sourceInterval":[188,240]},null,[],["seq",{"sourceInterval":[188,227]},["app",{"sourceInterval":[188,193]},"ident",[]],["opt",{"sourceInterval":[194,202]},["app",{"sourceInterval":[194,201]},"Formals",[]]],["terminal",{"sourceInterval":[214,218]},":="],["app",{"sourceInterval":[219,227]},"RuleBody",[]]]],"Rule_extend":["define",{"sourceInterval":[247,297]},null,[],["seq",{"sourceInterval":[247,286]},["app",{"sourceInterval":[247,252]},"ident",[]],["opt",{"sourceInterval":[253,261]},["app",{"sourceInterval":[253,260]},"Formals",[]]],["terminal",{"sourceInterval":[273,277]},"+="],["app",{"sourceInterval":[278,286]},"RuleBody",[]]]],"Rule":["define",{"sourceInterval":[120,297]},null,[],["alt",{"sourceInterval":[131,297]},["app",{"sourceInterval":[131,170]},"Rule_define",[]],["app",{"sourceInterval":[188,227]},"Rule_override",[]],["app",{"sourceInterval":[247,286]},"Rule_extend",[]]]],"RuleBody":["define",{"sourceInterval":[301,354]},null,[],["seq",{"sourceInterval":[316,354]},["opt",{"sourceInterval":[316,320]},["terminal",{"sourceInterval":[316,319]},"|"]],["app",{"sourceInterval":[321,354]},"NonemptyListOf",[["app",{"sourceInterval":[336,348]},"TopLevelTerm",[]],["terminal",{"sourceInterval":[350,353]},"|"]]]]],"TopLevelTerm_inline":["define",{"sourceInterval":[377,400]},null,[],["seq",{"sourceInterval":[377,389]},["app",{"sourceInterval":[377,380]},"Seq",[]],["app",{"sourceInterval":[381,389]},"caseName",[]]]],"TopLevelTerm":["define",{"sourceInterval":[358,410]},null,[],["alt",{"sourceInterval":[377,410]},["app",{"sourceInterval":[377,389]},"TopLevelTerm_inline",[]],["app",{"sourceInterval":[407,410]},"Seq",[]]]],"Formals":["define",{"sourceInterval":[414,454]},null,[],["seq",{"sourceInterval":[428,454]},["terminal",{"sourceInterval":[428,431]},"<"],["app",{"sourceInterval":[432,450]},"ListOf",[["app",{"sourceInterval":[439,444]},"ident",[]],["terminal",{"sourceInterval":[446,449]},","]]],["terminal",{"sourceInterval":[451,454]},">"]]],"Params":["define",{"sourceInterval":[458,495]},null,[],["seq",{"sourceInterval":[471,495]},["terminal",{"sourceInterval":[471,474]},"<"],["app",{"sourceInterval":[475,491]},"ListOf",[["app",{"sourceInterval":[482,485]},"Seq",[]],["terminal",{"sourceInterval":[487,490]},","]]],["terminal",{"sourceInterval":[492,495]},">"]]],"Alt":["define",{"sourceInterval":[499,533]},null,[],["app",{"sourceInterval":[509,533]},"NonemptyListOf",[["app",{"sourceInterval":[524,527]},"Seq",[]],["terminal",{"sourceInterval":[529,532]},"|"]]]],"Seq":["define",{"sourceInterval":[537,552]},null,[],["star",{"sourceInterval":[547,552]},["app",{"sourceInterval":[547,551]},"Iter",[]]]],"Iter_star":["define",{"sourceInterval":[567,584]},null,[],["seq",{"sourceInterval":[567,575]},["app",{"sourceInterval":[567,571]},"Pred",[]],["terminal",{"sourceInterval":[572,575]},"*"]]],"Iter_plus":["define",{"sourceInterval":[591,608]},null,[],["seq",{"sourceInterval":[591,599]},["app",{"sourceInterval":[591,595]},"Pred",[]],["terminal",{"sourceInterval":[596,599]},"+"]]],"Iter_opt":["define",{"sourceInterval":[615,631]},null,[],["seq",{"sourceInterval":[615,623]},["app",{"sourceInterval":[615,619]},"Pred",[]],["terminal",{"sourceInterval":[620,623]},"?"]]],"Iter":["define",{"sourceInterval":[556,642]},null,[],["alt",{"sourceInterval":[567,642]},["app",{"sourceInterval":[567,575]},"Iter_star",[]],["app",{"sourceInterval":[591,599]},"Iter_plus",[]],["app",{"sourceInterval":[615,623]},"Iter_opt",[]],["app",{"sourceInterval":[638,642]},"Pred",[]]]],"Pred_not":["define",{"sourceInterval":[657,672]},null,[],["seq",{"sourceInterval":[657,664]},["terminal",{"sourceInterval":[657,660]},"~"],["app",{"sourceInterval":[661,664]},"Lex",[]]]],"Pred_lookahead":["define",{"sourceInterval":[679,700]},null,[],["seq",{"sourceInterval":[679,686]},["terminal",{"sourceInterval":[679,682]},"&"],["app",{"sourceInterval":[683,686]},"Lex",[]]]],"Pred":["define",{"sourceInterval":[646,710]},null,[],["alt",{"sourceInterval":[657,710]},["app",{"sourceInterval":[657,664]},"Pred_not",[]],["app",{"sourceInterval":[679,686]},"Pred_lookahead",[]],["app",{"sourceInterval":[707,710]},"Lex",[]]]],"Lex_lex":["define",{"sourceInterval":[724,740]},null,[],["seq",{"sourceInterval":[724,732]},["terminal",{"sourceInterval":[724,727]},"#"],["app",{"sourceInterval":[728,732]},"Base",[]]]],"Lex":["define",{"sourceInterval":[714,751]},null,[],["alt",{"sourceInterval":[724,751]},["app",{"sourceInterval":[724,732]},"Lex_lex",[]],["app",{"sourceInterval":[747,751]},"Base",[]]]],"Base_application":["define",{"sourceInterval":[766,827]},null,[],["seq",{"sourceInterval":[766,811]},["app",{"sourceInterval":[766,771]},"ident",[]],["opt",{"sourceInterval":[772,779]},["app",{"sourceInterval":[772,778]},"Params",[]]],["not",{"sourceInterval":[780,811]},["alt",{"sourceInterval":[782,810]},["seq",{"sourceInterval":[782,796]},["opt",{"sourceInterval":[782,792]},["app",{"sourceInterval":[782,791]},"ruleDescr",[]]],["terminal",{"sourceInterval":[793,796]},"="]],["terminal",{"sourceInterval":[799,803]},":="],["terminal",{"sourceInterval":[806,810]},"+="]]]]],"Base_range":["define",{"sourceInterval":[834,889]},null,[],["seq",{"sourceInterval":[834,856]},["app",{"sourceInterval":[834,842]},"terminal",[]],["terminal",{"sourceInterval":[843,847]},".."],["app",{"sourceInterval":[848,856]},"terminal",[]]]],"Base_terminal":["define",{"sourceInterval":[896,954]},null,[],["app",{"sourceInterval":[896,904]},"terminal",[]]],"Base_paren":["define",{"sourceInterval":[961,1016]},null,[],["seq",{"sourceInterval":[961,972]},["terminal",{"sourceInterval":[961,964]},"("],["app",{"sourceInterval":[965,968]},"Alt",[]],["terminal",{"sourceInterval":[969,972]},")"]]],"Base":["define",{"sourceInterval":[755,1016]},null,[],["alt",{"sourceInterval":[766,1016]},["app",{"sourceInterval":[766,811]},"Base_application",[]],["app",{"sourceInterval":[834,856]},"Base_range",[]],["app",{"sourceInterval":[896,904]},"Base_terminal",[]],["app",{"sourceInterval":[961,972]},"Base_paren",[]]]],"ruleDescr":["define",{"sourceInterval":[1020,1079]},"a rule description",[],["seq",{"sourceInterval":[1058,1079]},["terminal",{"sourceInterval":[1058,1061]},"("],["app",{"sourceInterval":[1062,1075]},"ruleDescrText",[]],["terminal",{"sourceInterval":[1076,1079]},")"]]],"ruleDescrText":["define",{"sourceInterval":[1083,1114]},null,[],["star",{"sourceInterval":[1103,1114]},["seq",{"sourceInterval":[1104,1112]},["not",{"sourceInterval":[1104,1108]},["terminal",{"sourceInterval":[1105,1108]},")"]],["app",{"sourceInterval":[1109,1112]},"any",[]]]]],"caseName":["define",{"sourceInterval":[1118,1186]},null,[],["seq",{"sourceInterval":[1133,1186]},["terminal",{"sourceInterval":[1133,1137]},"--"],["star",{"sourceInterval":[1138,1152]},["seq",{"sourceInterval":[1139,1150]},["not",{"sourceInterval":[1139,1144]},["terminal",{"sourceInterval":[1140,1144]},"\n"]],["app",{"sourceInterval":[1145,1150]},"space",[]]]],["app",{"sourceInterval":[1153,1157]},"name",[]],["star",{"sourceInterval":[1158,1172]},["seq",{"sourceInterval":[1159,1170]},["not",{"sourceInterval":[1159,1164]},["terminal",{"sourceInterval":[1160,1164]},"\n"]],["app",{"sourceInterval":[1165,1170]},"space",[]]]],["alt",{"sourceInterval":[1174,1185]},["terminal",{"sourceInterval":[1174,1178]},"\n"],["lookahead",{"sourceInterval":[1181,1185]},["terminal",{"sourceInterval":[1182,1185]},"}"]]]]],"name":["define",{"sourceInterval":[1190,1230]},"a name",[],["seq",{"sourceInterval":[1211,1230]},["app",{"sourceInterval":[1211,1220]},"nameFirst",[]],["star",{"sourceInterval":[1221,1230]},["app",{"sourceInterval":[1221,1229]},"nameRest",[]]]]],"nameFirst":["define",{"sourceInterval":[1234,1266]},null,[],["alt",{"sourceInterval":[1250,1266]},["terminal",{"sourceInterval":[1250,1253]},"_"],["app",{"sourceInterval":[1260,1266]},"letter",[]]]],"nameRest":["define",{"sourceInterval":[1270,1300]},null,[],["alt",{"sourceInterval":[1285,1300]},["terminal",{"sourceInterval":[1285,1288]},"_"],["app",{"sourceInterval":[1295,1300]},"alnum",[]]]],"ident":["define",{"sourceInterval":[1304,1337]},"an identifier",[],["app",{"sourceInterval":[1333,1337]},"name",[]]],"terminal":["define",{"sourceInterval":[1341,1379]},null,[],["seq",{"sourceInterval":[1356,1379]},["terminal",{"sourceInterval":[1356,1360]},"\""],["star",{"sourceInterval":[1361,1374]},["app",{"sourceInterval":[1361,1373]},"terminalChar",[]]],["terminal",{"sourceInterval":[1375,1379]},"\""]]],"terminalChar":["define",{"sourceInterval":[1383,1440]},null,[],["alt",{"sourceInterval":[1402,1440]},["app",{"sourceInterval":[1402,1412]},"escapeChar",[]],["seq",{"sourceInterval":[1419,1440]},["not",{"sourceInterval":[1419,1424]},["terminal",{"sourceInterval":[1420,1424]},"\\"]],["not",{"sourceInterval":[1425,1430]},["terminal",{"sourceInterval":[1426,1430]},"\""]],["not",{"sourceInterval":[1431,1436]},["terminal",{"sourceInterval":[1432,1436]},"\n"]],["app",{"sourceInterval":[1437,1440]},"any",[]]]]],"escapeChar_backslash":["define",{"sourceInterval":[1483,1538]},null,[],["terminal",{"sourceInterval":[1483,1489]},"\\\\"]],"escapeChar_doubleQuote":["define",{"sourceInterval":[1545,1602]},null,[],["terminal",{"sourceInterval":[1545,1551]},"\\\""]],"escapeChar_singleQuote":["define",{"sourceInterval":[1609,1666]},null,[],["terminal",{"sourceInterval":[1609,1615]},"\\'"]],"escapeChar_backspace":["define",{"sourceInterval":[1673,1728]},null,[],["terminal",{"sourceInterval":[1673,1678]},"\\b"]],"escapeChar_lineFeed":["define",{"sourceInterval":[1735,1789]},null,[],["terminal",{"sourceInterval":[1735,1740]},"\\n"]],"escapeChar_carriageReturn":["define",{"sourceInterval":[1796,1856]},null,[],["terminal",{"sourceInterval":[1796,1801]},"\\r"]],"escapeChar_tab":["define",{"sourceInterval":[1863,1912]},null,[],["terminal",{"sourceInterval":[1863,1868]},"\\t"]],"escapeChar_unicodeEscape":["define",{"sourceInterval":[1919,1978]},null,[],["seq",{"sourceInterval":[1919,1960]},["terminal",{"sourceInterval":[1919,1924]},"\\u"],["app",{"sourceInterval":[1925,1933]},"hexDigit",[]],["app",{"sourceInterval":[1934,1942]},"hexDigit",[]],["app",{"sourceInterval":[1943,1951]},"hexDigit",[]],["app",{"sourceInterval":[1952,1960]},"hexDigit",[]]]],"escapeChar_hexEscape":["define",{"sourceInterval":[1985,2040]},null,[],["seq",{"sourceInterval":[1985,2008]},["terminal",{"sourceInterval":[1985,1990]},"\\x"],["app",{"sourceInterval":[1991,1999]},"hexDigit",[]],["app",{"sourceInterval":[2000,2008]},"hexDigit",[]]]],"escapeChar":["define",{"sourceInterval":[1444,2040]},"an escape sequence",[],["alt",{"sourceInterval":[1483,2040]},["app",{"sourceInterval":[1483,1489]},"escapeChar_backslash",[]],["app",{"sourceInterval":[1545,1551]},"escapeChar_doubleQuote",[]],["app",{"sourceInterval":[1609,1615]},"escapeChar_singleQuote",[]],["app",{"sourceInterval":[1673,1678]},"escapeChar_backspace",[]],["app",{"sourceInterval":[1735,1740]},"escapeChar_lineFeed",[]],["app",{"sourceInterval":[1796,1801]},"escapeChar_carriageReturn",[]],["app",{"sourceInterval":[1863,1868]},"escapeChar_tab",[]],["app",{"sourceInterval":[1919,1960]},"escapeChar_unicodeEscape",[]],["app",{"sourceInterval":[1985,2008]},"escapeChar_hexEscape",[]]]],"space":["extend",{"sourceInterval":[2044,2063]},null,[],["app",{"sourceInterval":[2056,2063]},"comment",[]]],"comment_singleLine":["define",{"sourceInterval":[2081,2118]},null,[],["seq",{"sourceInterval":[2081,2103]},["terminal",{"sourceInterval":[2081,2085]},"//"],["star",{"sourceInterval":[2086,2098]},["seq",{"sourceInterval":[2087,2096]},["not",{"sourceInterval":[2087,2092]},["terminal",{"sourceInterval":[2088,2092]},"\n"]],["app",{"sourceInterval":[2093,2096]},"any",[]]]],["terminal",{"sourceInterval":[2099,2103]},"\n"]]],"comment_multiLine":["define",{"sourceInterval":[2125,2161]},null,[],["seq",{"sourceInterval":[2125,2147]},["terminal",{"sourceInterval":[2125,2129]},"/*"],["star",{"sourceInterval":[2130,2142]},["seq",{"sourceInterval":[2131,2140]},["not",{"sourceInterval":[2131,2136]},["terminal",{"sourceInterval":[2132,2136]},"*/"]],["app",{"sourceInterval":[2137,2140]},"any",[]]]],["terminal",{"sourceInterval":[2143,2147]},"*/"]]],"comment":["define",{"sourceInterval":[2067,2161]},null,[],["alt",{"sourceInterval":[2081,2161]},["app",{"sourceInterval":[2081,2103]},"comment_singleLine",[]],["app",{"sourceInterval":[2125,2147]},"comment_multiLine",[]]]],"tokens":["define",{"sourceInterval":[2165,2180]},null,[],["star",{"sourceInterval":[2174,2180]},["app",{"sourceInterval":[2174,2179]},"token",[]]]],"token":["define",{"sourceInterval":[2184,2260]},null,[],["alt",{"sourceInterval":[2192,2260]},["app",{"sourceInterval":[2192,2200]},"caseName",[]],["app",{"sourceInterval":[2203,2210]},"comment",[]],["app",{"sourceInterval":[2213,2218]},"ident",[]],["app",{"sourceInterval":[2221,2229]},"operator",[]],["app",{"sourceInterval":[2232,2243]},"punctuation",[]],["app",{"sourceInterval":[2246,2254]},"terminal",[]],["app",{"sourceInterval":[2257,2260]},"any",[]]]],"operator":["define",{"sourceInterval":[2264,2329]},null,[],["alt",{"sourceInterval":[2275,2329]},["terminal",{"sourceInterval":[2275,2279]},"<:"],["terminal",{"sourceInterval":[2282,2285]},"="],["terminal",{"sourceInterval":[2288,2292]},":="],["terminal",{"sourceInterval":[2295,2299]},"+="],["terminal",{"sourceInterval":[2302,2305]},"*"],["terminal",{"sourceInterval":[2308,2311]},"+"],["terminal",{"sourceInterval":[2314,2317]},"?"],["terminal",{"sourceInterval":[2320,2323]},"~"],["terminal",{"sourceInterval":[2326,2329]},"&"]]],"punctuation":["define",{"sourceInterval":[2333,2369]},null,[],["alt",{"sourceInterval":[2347,2369]},["terminal",{"sourceInterval":[2347,2350]},"<"],["terminal",{"sourceInterval":[2353,2356]},">"],["terminal",{"sourceInterval":[2359,2362]},","],["terminal",{"sourceInterval":[2365,2369]},"--"]]]}]);
 
 },{"..":50}],12:[function(require,module,exports){
 var ohm = require('..');
-module.exports = ohm.makeRecipe(function() {
-  var decl = this.newGrammar("OperationsAndAttributes")
-    .withSource("OperationsAndAttributes {\n\n  AttributeSignature =\n    name\n\n  OperationSignature =\n    name Formals?\n\n  Formals\n    = \"(\" ListOf<name, \",\"> \")\"\n\n  name  (a name)\n    = nameFirst nameRest*\n\n  nameFirst\n    = \"_\"\n    | letter\n\n  nameRest\n    = \"_\"\n    | alnum\n\n}")
-    .withDefaultStartRule("AttributeSignature")
-  return decl
-    .define("AttributeSignature", [], this.app("name").withInterval(decl.sourceInterval(54, 58)))
-    .define("OperationSignature", [], this.seq(this.app("name").withInterval(decl.sourceInterval(87, 91)), this.opt(this.app("Formals").withInterval(decl.sourceInterval(92, 99))).withInterval(decl.sourceInterval(92, 100))).withInterval(decl.sourceInterval(87, 100)))
-    .define("Formals", [], this.seq(this.terminal("(").withInterval(decl.sourceInterval(118, 121)), this.app("ListOf", [this.app("name").withInterval(decl.sourceInterval(129, 133)), this.terminal(",").withInterval(decl.sourceInterval(135, 138))]).withInterval(decl.sourceInterval(122, 139)), this.terminal(")").withInterval(decl.sourceInterval(140, 143))).withInterval(decl.sourceInterval(118, 143)))
-    .define("name", [], this.seq(this.app("nameFirst").withInterval(decl.sourceInterval(168, 177)), this.star(this.app("nameRest").withInterval(decl.sourceInterval(178, 186))).withInterval(decl.sourceInterval(178, 187))).withInterval(decl.sourceInterval(168, 187)), "a name")
-    .define("nameFirst", [], this.alt(this.terminal("_").withInterval(decl.sourceInterval(207, 210)), this.app("letter").withInterval(decl.sourceInterval(217, 223))).withInterval(decl.sourceInterval(207, 223)))
-    .define("nameRest", [], this.alt(this.terminal("_").withInterval(decl.sourceInterval(242, 245)), this.app("alnum").withInterval(decl.sourceInterval(252, 257))).withInterval(decl.sourceInterval(242, 257)))
-    .build();
-});
-
+module.exports = ohm.makeRecipe(["grammar",{"source":"OperationsAndAttributes {\n\n  AttributeSignature =\n    name\n\n  OperationSignature =\n    name Formals?\n\n  Formals\n    = \"(\" ListOf<name, \",\"> \")\"\n\n  name  (a name)\n    = nameFirst nameRest*\n\n  nameFirst\n    = \"_\"\n    | letter\n\n  nameRest\n    = \"_\"\n    | alnum\n\n}"},"OperationsAndAttributes",null,"AttributeSignature",{"AttributeSignature":["define",{"sourceInterval":[29,58]},null,[],["app",{"sourceInterval":[54,58]},"name",[]]],"OperationSignature":["define",{"sourceInterval":[62,100]},null,[],["seq",{"sourceInterval":[87,100]},["app",{"sourceInterval":[87,91]},"name",[]],["opt",{"sourceInterval":[92,100]},["app",{"sourceInterval":[92,99]},"Formals",[]]]]],"Formals":["define",{"sourceInterval":[104,143]},null,[],["seq",{"sourceInterval":[118,143]},["terminal",{"sourceInterval":[118,121]},"("],["app",{"sourceInterval":[122,139]},"ListOf",[["app",{"sourceInterval":[129,133]},"name",[]],["terminal",{"sourceInterval":[135,138]},","]]],["terminal",{"sourceInterval":[140,143]},")"]]],"name":["define",{"sourceInterval":[147,187]},"a name",[],["seq",{"sourceInterval":[168,187]},["app",{"sourceInterval":[168,177]},"nameFirst",[]],["star",{"sourceInterval":[178,187]},["app",{"sourceInterval":[178,186]},"nameRest",[]]]]],"nameFirst":["define",{"sourceInterval":[191,223]},null,[],["alt",{"sourceInterval":[207,223]},["terminal",{"sourceInterval":[207,210]},"_"],["app",{"sourceInterval":[217,223]},"letter",[]]]],"nameRest":["define",{"sourceInterval":[227,257]},null,[],["alt",{"sourceInterval":[242,257]},["terminal",{"sourceInterval":[242,245]},"_"],["app",{"sourceInterval":[252,257]},"alnum",[]]]]}]);
 
 },{"..":50}],13:[function(require,module,exports){
 'use strict';
@@ -3450,6 +3364,7 @@ function extend(origin, add) {
 // --------------------------------------------------------------------
 
 var GrammarDecl = require('./GrammarDecl');
+var Interval = require('./Interval');
 var pexprs = require('./pexprs');
 
 // --------------------------------------------------------------------
@@ -3459,8 +3374,43 @@ var pexprs = require('./pexprs');
 function Builder() {}
 
 Builder.prototype = {
+  currentDecl: null,
+
   newGrammar: function(name) {
     return new GrammarDecl(name);
+  },
+
+  grammar: function(metaInfo, name, superGrammar, defaultStartRule, rules) {
+    var gDecl = new GrammarDecl(name);
+    if (superGrammar) {
+      gDecl.withSuperGrammar(this.fromRecipe(superGrammar));
+    }
+    if (defaultStartRule) {
+      gDecl.withDefaultStartRule(defaultStartRule);
+    }
+    if (metaInfo && metaInfo.source) {
+      gDecl.withSource(metaInfo.source);
+    }
+
+    var self = this;
+    this.currentDecl = gDecl;
+    Object.keys(rules).forEach(function(ruleName) {
+      var ruleRecipe = rules[ruleName];
+
+      var action = ruleRecipe[0]; // define/extend/override
+      var metaInfo = ruleRecipe[1];
+      var optDescription = ruleRecipe[2];
+      var formals = ruleRecipe[3];
+      var body = self.fromRecipe(ruleRecipe[4]);
+      if (gDecl.interval && metaInfo && metaInfo.sourceInterval) {
+        body.definitionInterval = new Interval(gDecl.interval.inputStream,
+          metaInfo.sourceInterval[0], metaInfo.sourceInterval[1]);
+      }
+
+      gDecl[action](ruleName, formals, body, optDescription);
+    });
+    this.currentDecl = null;
+    return gDecl.build();
   },
 
   terminal: function(x) {
@@ -3479,6 +3429,9 @@ Builder.prototype = {
     var terms = [];
     for (var idx = 0; idx < arguments.length; idx++) {
       var arg = arguments[idx];
+      if (!(arg instanceof pexprs.PExpr)) {
+        arg = this.fromRecipe(arg);
+      }
       if (arg instanceof pexprs.Alt) {
         terms = terms.concat(arg.terms);
       } else {
@@ -3492,6 +3445,9 @@ Builder.prototype = {
     var factors = [];
     for (var idx = 0; idx < arguments.length; idx++) {
       var arg = arguments[idx];
+      if (!(arg instanceof pexprs.PExpr)) {
+        arg = this.fromRecipe(arg);
+      }
       if (arg instanceof pexprs.Seq) {
         factors = factors.concat(arg.factors);
       } else {
@@ -3502,31 +3458,76 @@ Builder.prototype = {
   },
 
   star: function(expr) {
+    if (!(expr instanceof pexprs.PExpr)) {
+      expr = this.fromRecipe(expr);
+    }
     return new pexprs.Star(expr);
   },
 
   plus: function(expr) {
+    if (!(expr instanceof pexprs.PExpr)) {
+      expr = this.fromRecipe(expr);
+    }
     return new pexprs.Plus(expr);
   },
 
   opt: function(expr) {
+    if (!(expr instanceof pexprs.PExpr)) {
+      expr = this.fromRecipe(expr);
+    }
     return new pexprs.Opt(expr);
   },
 
   not: function(expr) {
+    if (!(expr instanceof pexprs.PExpr)) {
+      expr = this.fromRecipe(expr);
+    }
     return new pexprs.Not(expr);
   },
 
   la: function(expr) {
+    // TODO: temporary to still be able to read old recipes
+    return this.lookahead(expr);
+  },
+
+  lookahead: function(expr) {
+    if (!(expr instanceof pexprs.PExpr)) {
+      expr = this.fromRecipe(expr);
+    }
     return new pexprs.Lookahead(expr);
   },
 
   lex: function(expr) {
+    if (!(expr instanceof pexprs.PExpr)) {
+      expr = this.fromRecipe(expr);
+    }
     return new pexprs.Lex(expr);
   },
 
   app: function(ruleName, optParams) {
+    if (optParams && optParams.length > 0) {
+      optParams = optParams.map(function(param) {
+        return param instanceof pexprs.PExpr ? param :
+          this.fromRecipe(param);
+      }, this);
+    }
     return new pexprs.Apply(ruleName, optParams);
+  },
+
+  fromRecipe: function(recipe) {
+    // the meta-info of 'grammar' is proccessed in Builder.grammar
+    var result = this[recipe[0]].apply(this,
+      recipe[0] === 'grammar' ? recipe.slice(1) : recipe.slice(2));
+
+    var metaInfo = recipe[1];
+    if (metaInfo) {
+      if (metaInfo.sourceInterval && this.currentDecl) {
+        result.withInterval(
+          this.currentDecl.sourceInterval.apply(this.currentDecl, metaInfo.sourceInterval)
+        );
+      }
+    }
+    return result;
   }
 };
 
@@ -3536,7 +3537,7 @@ Builder.prototype = {
 
 module.exports = Builder;
 
-},{"./GrammarDecl":39,"./pexprs":67}],37:[function(require,module,exports){
+},{"./GrammarDecl":39,"./Interval":41,"./pexprs":67}],37:[function(require,module,exports){
 'use strict';
 
 // --------------------------------------------------------------------
@@ -3561,15 +3562,19 @@ function isValidType(type) {
   return type === 'description' || type === 'string' || type === 'code';
 }
 
-function Failure(text, type) {
+function Failure(pexpr, text, type) {
   if (!isValidType(type)) {
     throw new Error('invalid Failure type: ' + type);
   }
-
+  this.pexpr = pexpr;
   this.text = text;
   this.type = type;
   this.fluffy = false;
 }
+
+Failure.prototype.getPExpr = function() {
+  return this.pexpr;
+};
 
 Failure.prototype.getText = function() {
   return this.text;
@@ -3616,7 +3621,7 @@ Failure.prototype.toString = function() {
 };
 
 Failure.prototype.clone = function() {
-  var failure = new Failure(this.text, this.type);
+  var failure = new Failure(this.pexpr, this.text, this.type);
   if (this.isFluffy()) {
     failure.makeFluffy();
   }
@@ -3778,56 +3783,66 @@ Grammar.prototype = {
   },
 
   toRecipe: function(optVarName) {
-    if (this.isBuiltIn()) {
-      throw new Error(
-          'Why would anyone want to generate a recipe for the ' + this.name + ' grammar?!?!');
-    }
-    var sb = new common.StringBuffer();
-    if (optVarName) {
-      sb.append('var ' + optVarName + ' = ');
-    }
-    sb.append('(function() {\n');
-
-    // Include the supergrammar in the recipe if it's not a built-in grammar.
-    var superGrammarDecl = '';
-    if (!this.superGrammar.isBuiltIn()) {
-      sb.append(this.superGrammar.toRecipe('buildSuperGrammar'));
-      superGrammarDecl = '    .withSuperGrammar(buildSuperGrammar.call(this))\n';
-    }
-    sb.append('  var decl = this.newGrammar(' + JSON.stringify(this.name) + ')\n');
-
+    var metaInfo = {};
     // Include the grammar source if it is available.
     if (this.definitionInterval) {
-      sb.append('    .withSource(' + JSON.stringify(this.definitionInterval.contents) + ')\n');
+      metaInfo.source = this.definitionInterval.contents;
     }
-    sb.append(superGrammarDecl);
 
+    var superGrammar = null;
+    if (this.superGrammar && !this.superGrammar.isBuiltIn()) {
+      superGrammar = JSON.parse(this.superGrammar.toRecipe());
+    }
+
+    var startRule = null;
     if (this.defaultStartRule) {
-      sb.append('    .withDefaultStartRule("' + this.defaultStartRule + '")\n');
+      startRule = this.defaultStartRule;
     }
-    sb.append('  return decl\n');
 
+    var rules = {};
     var self = this;
     Object.keys(this.ruleBodies).forEach(function(ruleName) {
       var body = self.ruleBodies[ruleName];
-      sb.append('    .');
-      if (self.superGrammar.ruleBodies[ruleName]) {
-        sb.append(body instanceof pexprs.Extend ? 'extend' : 'override');
-      } else {
-        sb.append('define');
-      }
-      var formals = self.ruleFormals[ruleName];
-      var formalsString = '[' + formals.map(JSON.stringify).join(', ') + ']';
-      sb.append('(' + JSON.stringify(ruleName) + ', ' + formalsString + ', ');
-      body.outputRecipe(sb, formals, self.definitionInterval);
+      var isDefinition = !self.superGrammar || !self.superGrammar.ruleBodies[ruleName];
 
-      if (!self.superGrammar.ruleBodies[ruleName] && self.ruleDescriptions[ruleName]) {
-        sb.append(', ' + JSON.stringify(self.ruleDescriptions[ruleName]));
+      var operation;
+      if (isDefinition) {
+        operation = 'define';
+      } else {
+        operation = body instanceof pexprs.Extend ? 'extend' : 'override';
       }
-      sb.append(')\n');
+
+      var metaInfo = {};
+      if (body.definitionInterval && self.definitionInterval) {
+        var adjusted = body.definitionInterval.relativeTo(self.definitionInterval);
+        metaInfo.sourceInterval = [adjusted.startIdx, adjusted.endIdx];
+      }
+
+      var description = null;
+      if (isDefinition && self.ruleDescriptions[ruleName]) {
+        description = self.ruleDescriptions[ruleName];
+      }
+
+      var formals = self.ruleFormals[ruleName];
+      var ruleBody = body.outputRecipe(formals, self.definitionInterval);
+
+      rules[ruleName] = [
+        operation, // "define"/"extend"/"override"
+        metaInfo,
+        description,
+        formals,
+        ruleBody
+      ];
     });
-    sb.append('    .build();\n});\n');
-    return sb.contents();
+
+    return JSON.stringify([
+      'grammar',
+      metaInfo,
+      this.name,
+      superGrammar,
+      startRule,
+      rules
+    ]);
   },
 
   // TODO: Come up with better names for these methods.
@@ -4132,6 +4147,7 @@ GrammarDecl.prototype.extend = function(name, formals, fragment) {
   }
   var body = new pexprs.Extend(this.superGrammar, name, fragment);
   body.interval = fragment.interval;
+  body.definitionInterval = fragment.definitionInterval;
   this.installOverriddenOrExtendedRule(name, formals, body);
   return this;
 };
@@ -4316,6 +4332,10 @@ Object.defineProperties(Interval.prototype, {
       }
       return this._contents;
     },
+    enumerable: true
+  },
+  length: {
+    get: function() { return this.endIdx - this.startIdx; },
     enumerable: true
   }
 });
@@ -4936,8 +4956,7 @@ Semantics.prototype.toRecipe = function(semanticsOnly) {
   if (!semanticsOnly) {
     str =
       '(function() {\n' +
-      '  var buildGrammar = ' + this.grammar.toRecipe() +
-      '  var grammar = buildGrammar.call(this);\n' +
+      '  var grammar = this.fromRecipe(' + this.grammar.toRecipe() + ');\n' +
       '  var semantics = ' + str + '(grammar);\n' +
       '  return semantics;\n' +
       '});\n';
@@ -5090,7 +5109,10 @@ Semantics.prototype.addOperationOrAttribute = function(type, signature, actionDi
       return '[' + name + ' operation]';
     };
   } else {
-    Object.defineProperty(this.Wrapper.prototype, name, {get: doIt});
+    Object.defineProperty(this.Wrapper.prototype, name, {
+        get: doIt,
+        configurable: true  // So the property can be deleted.
+      });
     this.attributeKeys[name] = Symbol();
   }
 };
@@ -5175,7 +5197,7 @@ Semantics.createSemantics = function(grammar, optSuperSemantics) {
     var cst = matchResult._cst;
     if (cst.grammar !== grammar) {
       throw new Error(
-          "Cannot use a CST node created by grammar '" + cst.grammar.name +
+          "Cannot use a MatchResult from grammar '" + cst.grammar.name +
           "' with a semantics for '" + grammar.name + "'");
     }
     return s.wrap(cst);
@@ -5205,6 +5227,18 @@ Semantics.createSemantics = function(grammar, optSuperSemantics) {
         'name in this semantics for "' + grammar.name + '"');
     }
     return action.actionDict;
+  };
+  proxy._remove = function(operationOrAttributeName) {
+    var semantic;
+    if (operationOrAttributeName in s.operations) {
+      semantic = s.operations[operationOrAttributeName];
+      delete s.operations[operationOrAttributeName];
+    } else if (operationOrAttributeName in s.attributes) {
+      semantic = s.attributes[operationOrAttributeName];
+      delete s.attributes[operationOrAttributeName];
+    }
+    delete s.Wrapper.prototype[operationOrAttributeName];
+    return semantic;
   };
   proxy.getOperationNames = function() {
     return Object.keys(s.operations);
@@ -5455,7 +5489,8 @@ State.prototype = {
   },
 
   truncateBindings: function(newLength) {
-    // TODO: is this really faster than setting the `length` property?
+    // Yes, this is this really faster than setting the `length` property (tested with
+    // bin/es5bench on Node v6.1.0).
     while (this.bindings.length > newLength) {
       this.bindings.pop();
     }
@@ -5543,8 +5578,10 @@ State.prototype = {
     var posInfo = this.posInfos[pos];
     if (posInfo && expr.ruleName) {
       var memoRec = posInfo.memo[expr.toMemoKey()];
-      if (memoRec) {
-        return memoRec.traceEntry;
+      if (memoRec && memoRec.traceEntry) {
+        var entry = memoRec.traceEntry.cloneWithExpr(expr);
+        entry.isMemoized = true;
+        return entry;
       }
     }
     return null;
@@ -5552,9 +5589,8 @@ State.prototype = {
 
   // Returns a new trace entry, with the currently active trace array as its children.
   getTraceEntry: function(pos, expr, succeeded, bindings) {
-    var memoEntry = this.getMemoizedTraceEntry(pos, expr);
-    return memoEntry ? memoEntry.cloneWithExpr(expr)
-                     : new Trace(this.inputStream, pos, expr, succeeded, bindings, this.trace);
+    return this.getMemoizedTraceEntry(pos, expr) ||
+           new Trace(this.inputStream, pos, expr, succeeded, bindings, this.trace);
   },
 
   isTracing: function() {
@@ -5734,10 +5770,12 @@ function Trace(inputStream, pos, expr, succeeded, bindings, optChildren) {
   this.bindings = bindings;
   this.children = optChildren || [];
 
+  this.isHeadOfLeftRecursion = false;  // Is this the outermost LR application?
   this.isImplicitSpaces = false;
-  this.isLeftRecursive = false;
   this.isMemoized = false;
   this.isRootNode = false;
+  this.terminatesLR = false;
+  this.terminatingLREntry = null;
 }
 
 // A value that can be returned from visitor functions to indicate that a
@@ -5748,13 +5786,28 @@ Object.defineProperty(Trace.prototype, 'displayString', {
   get: function() { return this.expr.toDisplayString(); }
 });
 
+Trace.prototype.clone = function() {
+  return this.cloneWithExpr(this.expr);
+};
+
 Trace.prototype.cloneWithExpr = function(expr) {
   var ans = new Trace(
       this.inputStream, this.pos, expr, this.succeeded, this.bindings, this.children);
-  ans.isLeftRecursive = this.isLeftRecursive;
+
+  ans.isHeadOfLeftRecursion = this.isHeadOfLeftRecursion;
+  ans.isImplicitSpaces = this.isImplicitSpaces;
+  ans.isMemoized = this.isMemoized;
   ans.isRootNode = this.isRootNode;
-  ans.isMemoized = true;
+  ans.terminatesLR = this.terminatesLR;
+  ans.terminatingLREntry = this.terminatingLREntry;
   return ans;
+};
+
+// Record the trace information for the terminating condition of the LR loop.
+Trace.prototype.recordLRTermination = function(ruleBodyTrace, value) {
+  this.terminatingLREntry =
+      new Trace(this.inputStream, this.pos, this.expr, false, [value], [ruleBodyTrace]);
+  this.terminatingLREntry.terminatesLR = true;
 };
 
 // Recursively traverse this trace node and all its descendents, calling a visitor function
@@ -5780,14 +5833,8 @@ Trace.prototype.walk = function(visitorObjOrFn, optThisArg) {
       }
     }
     if (recurse) {
-      node.children.forEach(function(child, i) {
-        var nextChild = node.children[i + 1];
-        if (nextChild && nextChild.expr === child.expr && nextChild.pos === child.pos) {
-          // Skip this child -- it is an intermediate left-recursive result.
-          common.assert(node.isLeftRecursive);
-        } else {
-          _walk(child, node, depth + 1);
-        }
+      node.children.forEach(function(child) {
+        _walk(child, node, depth + 1);
       });
       if (visitor.exit) {
         visitor.exit.call(optThisArg, node, parent, depth);
@@ -5820,7 +5867,7 @@ Trace.prototype.toString = function() {
     }
     sb.append(getInputExcerpt(node.inputStream, node.pos, 10) + spaces(depth * 2 + 1));
     sb.append((node.succeeded ? CHECK_MARK : BALLOT_X) + ' ' + node.displayString);
-    if (node.isLeftRecursive) {
+    if (node.isHeadOfLeftRecursion) {
       sb.append(' (LR)');
     }
     if (node.succeeded) {
@@ -5872,10 +5919,13 @@ escapeStringFor['\u000b'.charCodeAt(0)] = '\\v';
 // Exports
 // --------------------------------------------------------------------
 
-exports.abstract = function() {
-  throw new Error(
-      'this method is abstract! ' +
+exports.abstract = function(optMethodName) {
+  var methodName = optMethodName || '';
+  return function() {
+    throw new Error(
+      'this method ' + methodName + ' is abstract! ' +
       '(it has no implementation in class ' + this.constructor.name + ')');
+  };
 };
 
 exports.assert = function(cond, message) {
@@ -6380,8 +6430,8 @@ function buildGrammar(match, namespace, optOhmGrammarForTesting) {
       decl.ruleBodies[currentRuleName].definitionInterval = this.interval.trimmed();
       return ans;
     },
-    RuleBody: function(_, term, _bars, terms) {
-      var args = [term.visit()].concat(terms.visit());
+    RuleBody: function(_, terms) {
+      var args = terms.visit();
       return builder.alt.apply(builder, args).withInterval(this.interval);
     },
 
@@ -6393,8 +6443,8 @@ function buildGrammar(match, namespace, optOhmGrammarForTesting) {
       return ps.visit();
     },
 
-    Alt: function(seq, _, seqs) {
-      var args = [seq.visit()].concat(seqs.visit());
+    Alt: function(seqs) {
+      var args = seqs.visit();
       return builder.alt.apply(builder, args).withInterval(this.interval);
     },
 
@@ -6431,7 +6481,7 @@ function buildGrammar(match, namespace, optOhmGrammarForTesting) {
       return builder.not(x.visit()).withInterval(this.interval);
     },
     Pred_lookahead: function(_, x) {
-      return builder.la(x.visit()).withInterval(this.interval);
+      return builder.lookahead(x.visit()).withInterval(this.interval);
     },
 
     Lex_lex: function(_, x) {
@@ -6579,8 +6629,16 @@ function grammarsFromScriptElements(optNodeOrNodeList) {
   return ns;
 }
 
-function makeRecipe(recipeFn) {
-  return recipeFn.call(new Builder());
+function makeRecipe(recipe) {
+  if (typeof recipe === 'function') {
+    return recipe.call(new Builder());
+  } else {
+    if (typeof recipe === 'string') {
+      // stringified JSON recipe
+      recipe = JSON.parse(recipe);
+    }
+    return (new Builder()).fromRecipe(recipe);
+  }
 }
 
 // --------------------------------------------------------------------
@@ -6802,7 +6860,9 @@ var pexprs = require('./pexprs');
 /*
   Return true if we should skip spaces preceding this expression in a syntactic context.
 */
-pexprs.PExpr.prototype.allowsSkippingPrecedingSpace = common.abstract;
+pexprs.PExpr.prototype.allowsSkippingPrecedingSpace = common.abstract(
+  'allowsSkippingPrecedingSpace'
+);
 
 /*
   Generally, these are all first-order expressions that operate on strings and (with the
@@ -6853,7 +6913,9 @@ pexprs.PExpr.prototype.assertAllApplicationsAreValid = function(ruleName, gramma
   this._assertAllApplicationsAreValid(ruleName, grammar);
 };
 
-pexprs.PExpr.prototype._assertAllApplicationsAreValid = common.abstract;
+pexprs.PExpr.prototype._assertAllApplicationsAreValid = common.abstract(
+  '_assertAllApplicationsAreValid'
+);
 
 pexprs.any._assertAllApplicationsAreValid =
 pexprs.end._assertAllApplicationsAreValid =
@@ -6933,7 +6995,9 @@ var pexprs = require('./pexprs');
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.assertChoicesHaveUniformArity = common.abstract;
+pexprs.PExpr.prototype.assertChoicesHaveUniformArity = common.abstract(
+  'assertChoicesHaveUniformArity'
+);
 
 pexprs.any.assertChoicesHaveUniformArity =
 pexprs.end.assertChoicesHaveUniformArity =
@@ -7008,7 +7072,9 @@ var pexprs = require('./pexprs');
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.assertIteratedExprsAreNotNullable = common.abstract;
+pexprs.PExpr.prototype.assertIteratedExprsAreNotNullable = common.abstract(
+  'assertIteratedExprsAreNotNullable'
+);
 
 pexprs.any.assertIteratedExprsAreNotNullable =
 pexprs.end.assertIteratedExprsAreNotNullable =
@@ -7068,7 +7134,7 @@ var pexprs = require('./pexprs');
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.check = common.abstract;
+pexprs.PExpr.prototype.check = common.abstract('check');
 
 pexprs.any.check = function(grammar, vals) {
   return vals.length >= 1;
@@ -7211,7 +7277,7 @@ var IterationNode = nodes.IterationNode;
   Note that `State.prototype.eval(expr)`, unlike this method, guarantees that neither the state
   object's bindings nor its input stream's position will change if the expression fails to match.
 */
-pexprs.PExpr.prototype.eval = common.abstract;  // function(state) { ... }
+pexprs.PExpr.prototype.eval = common.abstract('eval');  // function(state) { ... }
 
 pexprs.any.eval = function(state) {
   var inputStream = state.inputStream;
@@ -7424,7 +7490,7 @@ pexprs.Apply.prototype.reallyEval = function(state) {
   var value = this.evalOnce(body, state);
   var currentLR = origPosInfo.currentLeftRecursion;
   var memoKey = this.toMemoKey();
-  var isHeadOfLeftRecursion = currentLR && currentLR.headApplication.toMemoKey() === memoKey;
+  var isHeadOfLeftRecursion = !!currentLR && currentLR.headApplication.toMemoKey() === memoKey;
   var memoized = true;
 
   if (isHeadOfLeftRecursion) {
@@ -7457,7 +7523,10 @@ pexprs.Apply.prototype.reallyEval = function(state) {
   if (state.isTracing() && origPosInfo.memo[memoKey]) {
     var succeeded = !!value;
     var entry = state.getTraceEntry(origPos, this, succeeded, succeeded ? [value] : []);
-    entry.isLeftRecursive = isHeadOfLeftRecursion;
+    if (isHeadOfLeftRecursion) {
+      common.assert(entry.terminatingLREntry != null || !succeeded);
+      entry.isHeadOfLeftRecursion = true;
+    }
     origPosInfo.memo[memoKey].traceEntry = entry;
   }
 
@@ -7500,21 +7569,24 @@ pexprs.Apply.prototype.growSeedResult = function(body, state, origPos, lrMemoRec
 
     if (state.isTracing()) {
       // Before evaluating the body again, add a trace node for this application to the memo entry.
-      // Its only child is the trace node from `newValue`, which will always be the last element
-      // in `state.trace`.
-      var children = state.trace.slice(-1);
+      // Its only child is a copy of the trace node from `newValue`, which will always be the last
+      // element in `state.trace`.
+      var seedTrace = state.trace[state.trace.length - 1];
       lrMemoRec.traceEntry = new Trace(
-          state.inputStream, origPos, this, true, [newValue], children);
+          state.inputStream, origPos, this, true, [newValue], [seedTrace.clone()]);
     }
     inputStream.pos = origPos;
     newValue = this.evalOnce(body, state);
     if (inputStream.pos <= lrMemoRec.pos) {
       break;
     }
+    if (state.isTracing()) {
+      state.trace.splice(-2, 1);  // Drop the trace for the old seed.
+    }
   }
   if (state.isTracing()) {
-    state.trace.pop();  // Drop last trace entry since `value` was unused.
-    lrMemoRec.traceEntry = null;
+    // The last entry is for an unused result -- pop it and save it in the "real" entry.
+    lrMemoRec.traceEntry.recordLRTermination(state.trace.pop(), newValue);
   }
   inputStream.pos = lrMemoRec.pos;
   return lrMemoRec.value;
@@ -7548,7 +7620,7 @@ var pexprs = require('./pexprs');
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.getArity = common.abstract;
+pexprs.PExpr.prototype.getArity = common.abstract('getArity');
 
 pexprs.any.getArity =
 pexprs.end.getArity =
@@ -7606,7 +7678,7 @@ var pexprs = require('./pexprs');
   parameter with a `Param` node. Returns a PExpr -- either a new one, or the original one if
   it was modified in place.
 */
-pexprs.PExpr.prototype.introduceParams = common.abstract;
+pexprs.PExpr.prototype.introduceParams = common.abstract('introduceParams');
 
 pexprs.any.introduceParams =
 pexprs.end.introduceParams =
@@ -7674,7 +7746,7 @@ pexprs.PExpr.prototype.isNullable = function(grammar) {
   return this._isNullable(grammar, Object.create(null));
 };
 
-pexprs.PExpr.prototype._isNullable = common.abstract;
+pexprs.PExpr.prototype._isNullable = common.abstract('_isNullable');
 
 pexprs.any._isNullable =
 pexprs.Range.prototype._isNullable =
@@ -7743,118 +7815,107 @@ var pexprs = require('./pexprs');
 // Private stuff
 // --------------------------------------------------------------------
 
-function escapeString(str) {
-  var output = JSON.stringify(str);
-  output = output.replace(/[\u2028\u2029]/g, function(char, pos, str) {
-    var hex = char.codePointAt(0).toString(16);
-    return '\\u' + '0000'.slice(hex.length) + hex;
-  });
-  return output;
-}
-
-function getIntervalInfo(expr, grammarInterval) {
+function getMetaInfo(expr, grammarInterval) {
+  var metaInfo = {};
   if (expr.interval && grammarInterval) {
     var adjusted = expr.interval.relativeTo(grammarInterval);
-    var start = adjusted.startIdx;
-    var end = adjusted.endIdx;
-    return '.withInterval(decl.sourceInterval(' + start + ', ' + end + '))';
+    metaInfo.sourceInterval = [adjusted.startIdx, adjusted.endIdx];
   }
-  return '';
+  return metaInfo;
 }
 
 // --------------------------------------------------------------------
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.outputRecipe = common.abstract;
+pexprs.PExpr.prototype.outputRecipe = common.abstract('outputRecipe');
 
-pexprs.any.outputRecipe = function(sb, formals, grammarInterval) {
-  throw new Error('should never output a recipe for `any` expression');
+pexprs.any.outputRecipe = function(formals, grammarInterval) {
+  return ['any', getMetaInfo(this, grammarInterval)];
 };
 
-pexprs.end.outputRecipe = function(sb, formals, grammarInterval) {
-  throw new Error('should never output a recipe for `end` expression');
+pexprs.end.outputRecipe = function(formals, grammarInterval) {
+  return ['end', getMetaInfo(this, grammarInterval)];
 };
 
-pexprs.Terminal.prototype.outputRecipe = function(sb, formals, grammarInterval) {
-  sb.append('this.terminal(');
-  sb.append(typeof this.obj === 'string' ? escapeString(this.obj) : '' + this.obj);
-  sb.append(')' + getIntervalInfo(this, grammarInterval));
+pexprs.Terminal.prototype.outputRecipe = function(formals, grammarInterval) {
+  return [
+    'terminal',
+    getMetaInfo(this, grammarInterval),
+    this.obj
+  ];
 };
 
-pexprs.Range.prototype.outputRecipe = function(sb, formals, grammarInterval) {
-  sb.append('this.range(');
-  sb.append(JSON.stringify(this.from));
-  sb.append(', ');
-  sb.append(JSON.stringify(this.to));
-  sb.append(')' + getIntervalInfo(this, grammarInterval));
+pexprs.Range.prototype.outputRecipe = function(formals, grammarInterval) {
+  return [
+    'range',
+    getMetaInfo(this, grammarInterval),
+    this.from,
+    this.to
+  ];
 };
 
-pexprs.Param.prototype.outputRecipe = function(sb, formals, grammarInterval) {
-  sb.append('this.param(' + this.index + ')' + getIntervalInfo(this, grammarInterval));
+pexprs.Param.prototype.outputRecipe = function(formals, grammarInterval) {
+  return [
+    'param',
+    getMetaInfo(this, grammarInterval),
+    this.index
+  ];
 };
 
-pexprs.Alt.prototype.outputRecipe = function(sb, formals, grammarInterval) {
-  sb.append('this.alt(');
-  for (var idx = 0; idx < this.terms.length; idx++) {
-    if (idx > 0) {
-      sb.append(', ');
-    }
-    this.terms[idx].outputRecipe(sb, formals, grammarInterval);
-  }
-  sb.append(')' + getIntervalInfo(this, grammarInterval));
+pexprs.Alt.prototype.outputRecipe = function(formals, grammarInterval) {
+  return [
+    'alt',
+    getMetaInfo(this, grammarInterval)
+  ].concat(this.terms.map(function(term) {
+    return term.outputRecipe(formals, grammarInterval);
+  }));
 };
 
-pexprs.Extend.prototype.outputRecipe = function(sb, formals, grammarInterval) {
+pexprs.Extend.prototype.outputRecipe = function(formals, grammarInterval) {
   var extension = this.terms[0]; // [extension, orginal]
-  extension.outputRecipe(sb, formals, grammarInterval);
+  return extension.outputRecipe(formals, grammarInterval);
 };
 
-pexprs.Seq.prototype.outputRecipe = function(sb, formals, grammarInterval) {
-  sb.append('this.seq(');
-  for (var idx = 0; idx < this.factors.length; idx++) {
-    if (idx > 0) {
-      sb.append(', ');
-    }
-    this.factors[idx].outputRecipe(sb, formals, grammarInterval);
-  }
-  sb.append(')' + getIntervalInfo(this, grammarInterval));
+pexprs.Seq.prototype.outputRecipe = function(formals, grammarInterval) {
+  return [
+    'seq',
+    getMetaInfo(this, grammarInterval)
+  ].concat(this.factors.map(function(factor) {
+    return factor.outputRecipe(formals, grammarInterval);
+  }));
 };
 
 pexprs.Star.prototype.outputRecipe =
 pexprs.Plus.prototype.outputRecipe =
 pexprs.Opt.prototype.outputRecipe =
 pexprs.Not.prototype.outputRecipe =
-pexprs.Lex.prototype.outputRecipe = function(sb, formals, grammarInterval) {
-  sb.append('this.' + this.constructor.name.toLowerCase() + '(');
-  this.expr.outputRecipe(sb, formals, grammarInterval);
-  sb.append(')' + getIntervalInfo(this, grammarInterval));
+pexprs.Lookahead.prototype.outputRecipe =
+pexprs.Lex.prototype.outputRecipe = function(formals, grammarInterval) {
+  return [
+    this.constructor.name.toLowerCase(),
+    getMetaInfo(this, grammarInterval),
+    this.expr.outputRecipe(formals, grammarInterval)
+  ];
 };
 
-pexprs.Lookahead.prototype.outputRecipe = function(sb, formals, grammarInterval) {
-  sb.append('this.la(');
-  this.expr.outputRecipe(sb, formals, grammarInterval);
-  sb.append(')' + getIntervalInfo(this, grammarInterval));
+pexprs.Apply.prototype.outputRecipe = function(formals, grammarInterval) {
+  return [
+    'app',
+    getMetaInfo(this, grammarInterval),
+    this.ruleName,
+    this.args.map(function(arg) {
+      return arg.outputRecipe(formals, grammarInterval);
+    })
+  ];
 };
 
-pexprs.Apply.prototype.outputRecipe = function(sb, formals, grammarInterval) {
-  sb.append('this.app(');
-  sb.append(JSON.stringify(this.ruleName));
-  if (this.ruleName.indexOf('_') >= 0 && formals.length > 0) {
-    var apps = formals.
-        map(function(_, idx) { return 'this.param(' + idx + ')'; });
-    sb.append(', [' + apps.join(', ') + ']');
-  } else if (this.args.length > 0) {
-    sb.append(', [');
-    this.args.forEach(function(arg, idx) {
-      if (idx > 0) {
-        sb.append(', ');
-      }
-      arg.outputRecipe(sb, formals, grammarInterval);
-    });
-    sb.append(']');
-  }
-  sb.append(')' + getIntervalInfo(this, grammarInterval));
+pexprs.UnicodeChar.prototype.outputRecipe = function(formals, grammarInterval) {
+  return [
+    'unicodeChar',
+    getMetaInfo(this, grammarInterval),
+    this.category
+  ];
 };
 
 },{"./common":48,"./pexprs":67}],62:[function(require,module,exports){
@@ -7877,7 +7938,8 @@ var pexprs = require('./pexprs');
 
   The receiver must not be modified; a new PExpr must be returned if any replacement is necessary.
 */
-pexprs.PExpr.prototype.substituteParams = common.abstract;  // function(actuals) { ... }
+// function(actuals) { ... }
+pexprs.PExpr.prototype.substituteParams = common.abstract('substituteParams');
 
 pexprs.any.substituteParams =
 pexprs.end.substituteParams =
@@ -7932,86 +7994,14 @@ var pexprs = require('./pexprs');
 var copyWithoutDuplicates = common.copyWithoutDuplicates;
 
 // --------------------------------------------------------------------
-// Operations
+// Private stuff
 // --------------------------------------------------------------------
 
-/*
-  Returns a list of strings that will be used as the default argument names for its receiver
-  (a pexpr) in a semantic action. This is used exclusively by the Semantics Editor.
+function isRestrictedJSIdentifier(str) {
+  return /^[a-zA-Z_$][0-9a-zA-Z_$]*$/.test(str);
+}
 
-  `firstArgIndex` is the 1-based index of the first argument name that will be generated for this
-  pexpr. It enables us to name arguments positionally, e.g., if the second argument is a
-  non-alphanumeric terminal like "+", it will be named '$2'.
-
-  Here is a more elaborate example that illustrates how this method works:
-  `(a "+" b).toArgumentNameList(1)` evaluates to `['a', '$2', 'b']` with the following recursive
-  calls:
-
-    (a).toArgumentNameList(1) -> ['a'],
-    ("+").toArgumentNameList(2) -> ['$2'],
-    (b).toArgumentNameList(3) -> ['b']
-
-  Notes:
-  * This method must only be called on well-formed expressions, e.g., the receiver must
-    not have any Alt sub-expressions with inconsistent arities.
-  * e.getArity() === e.toArgumentNameList(1).length
-*/
-pexprs.PExpr.prototype.toArgumentNameList = common.abstract;  // function(firstArgIndex) { ... }
-
-pexprs.any.toArgumentNameList = function(firstArgIndex) {
-  return ['any'];
-};
-
-pexprs.end.toArgumentNameList = function(firstArgIndex) {
-  return ['end'];
-};
-
-pexprs.Terminal.prototype.toArgumentNameList = function(firstArgIndex) {
-  if (typeof this.obj === 'string' && /^[_a-zA-Z0-9]+$/.test(this.obj)) {
-    // If this terminal is a valid suffix for a JS identifier, just prepend it with '_'
-    return ['_' + this.obj];
-  } else {
-    // Otherwise, name it positionally.
-    return ['$' + firstArgIndex];
-  }
-};
-
-pexprs.Range.prototype.toArgumentNameList = function(firstArgIndex) {
-  return [this.from + '_to_' + this.to];
-};
-
-pexprs.Alt.prototype.toArgumentNameList = function(firstArgIndex) {
-  // `termArgNameLists` is an array of arrays where each row is the
-  // argument name list that corresponds to a term in this alternation.
-  var termArgNameLists = this.terms.map(function(term) {
-    return term.toArgumentNameList(firstArgIndex);
-  });
-
-  var argumentNameList = [];
-  var numArgs = termArgNameLists[0].length;
-  for (var colIdx = 0; colIdx < numArgs; colIdx++) {
-    var col = [];
-    for (var rowIdx = 0; rowIdx < this.terms.length; rowIdx++) {
-      col.push(termArgNameLists[rowIdx][colIdx]);
-    }
-    var uniqueNames = copyWithoutDuplicates(col);
-    argumentNameList.push(uniqueNames.join('_or_'));
-  }
-
-  return argumentNameList;
-};
-
-pexprs.Seq.prototype.toArgumentNameList = function(firstArgIndex) {
-  // Generate the argument name list, without worrying about duplicates.
-  var argumentNameList = [];
-  this.factors.forEach(function(factor) {
-    var factorArgumentNameList = factor.toArgumentNameList(firstArgIndex);
-    argumentNameList = argumentNameList.concat(factorArgumentNameList);
-
-    // Shift the firstArgIndex to take this factor's argument names into account.
-    firstArgIndex += factorArgumentNameList.length;
-  });
-
+function resolveDuplicatedNames(argumentNameList) {
   // `count` is used to record the number of times each argument name occurs in the list,
   // this is useful for checking duplicated argument name. It maps argument names to ints.
   var count = Object.create(null);
@@ -8033,39 +8023,149 @@ pexprs.Seq.prototype.toArgumentNameList = function(firstArgIndex) {
       }
     });
   });
+}
 
+// --------------------------------------------------------------------
+// Operations
+// --------------------------------------------------------------------
+
+/*
+  Returns a list of strings that will be used as the default argument names for its receiver
+  (a pexpr) in a semantic action. This is used exclusively by the Semantics Editor.
+
+  `firstArgIndex` is the 1-based index of the first argument name that will be generated for this
+  pexpr. It enables us to name arguments positionally, e.g., if the second argument is a
+  non-alphanumeric terminal like "+", it will be named '$2'.
+
+  `noDupCheck` is true if the caller of `toArgumentNameList` is not a top level caller. It enables
+  us to avoid nested duplication subscripts appending, e.g., '_1_1', '_1_2', by only checking
+  duplicates at the top level.
+
+  Here is a more elaborate example that illustrates how this method works:
+  `(a "+" b).toArgumentNameList(1)` evaluates to `['a', '$2', 'b']` with the following recursive
+  calls:
+
+    (a).toArgumentNameList(1) -> ['a'],
+    ("+").toArgumentNameList(2) -> ['$2'],
+    (b).toArgumentNameList(3) -> ['b']
+
+  Notes:
+  * This method must only be called on well-formed expressions, e.g., the receiver must
+    not have any Alt sub-expressions with inconsistent arities.
+  * e.getArity() === e.toArgumentNameList(1).length
+*/
+// function(firstArgIndex, noDupCheck) { ... }
+pexprs.PExpr.prototype.toArgumentNameList = common.abstract('toArgumentNameList');
+
+pexprs.any.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  return ['any'];
+};
+
+pexprs.end.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  return ['end'];
+};
+
+pexprs.Terminal.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  if (typeof this.obj === 'string' && /^[_a-zA-Z0-9]+$/.test(this.obj)) {
+    // If this terminal is a valid suffix for a JS identifier, just prepend it with '_'
+    return ['_' + this.obj];
+  } else {
+    // Otherwise, name it positionally.
+    return ['$' + firstArgIndex];
+  }
+};
+
+pexprs.Range.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  var argName = this.from + '_to_' + this.to;
+  // If the `argName` is not valid then try to prepend a `_`.
+  if (!isRestrictedJSIdentifier(argName)) {
+    argName = '_' + argName;
+  }
+  // If the `argName` still not valid after prepending a `_`, then name it positionally.
+  if (!isRestrictedJSIdentifier(argName)) {
+    argName = '$' + firstArgIndex;
+  }
+  return [argName];
+};
+
+pexprs.Alt.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  // `termArgNameLists` is an array of arrays where each row is the
+  // argument name list that corresponds to a term in this alternation.
+  var termArgNameLists = this.terms.map(function(term) {
+    return term.toArgumentNameList(firstArgIndex, true);
+  });
+
+  var argumentNameList = [];
+  var numArgs = termArgNameLists[0].length;
+  for (var colIdx = 0; colIdx < numArgs; colIdx++) {
+    var col = [];
+    for (var rowIdx = 0; rowIdx < this.terms.length; rowIdx++) {
+      col.push(termArgNameLists[rowIdx][colIdx]);
+    }
+    var uniqueNames = copyWithoutDuplicates(col);
+    argumentNameList.push(uniqueNames.join('_or_'));
+  }
+
+  if (!noDupCheck) {
+    resolveDuplicatedNames(argumentNameList);
+  }
   return argumentNameList;
 };
 
-pexprs.Iter.prototype.toArgumentNameList = function(firstArgIndex) {
-  return this.expr.toArgumentNameList(firstArgIndex).map(function(exprArgumentString) {
-    return exprArgumentString[exprArgumentString.length - 1] === 's' ?
-        exprArgumentString + 'es' :
-        exprArgumentString + 's';
+pexprs.Seq.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  // Generate the argument name list, without worrying about duplicates.
+  var argumentNameList = [];
+  this.factors.forEach(function(factor) {
+    var factorArgumentNameList = factor.toArgumentNameList(firstArgIndex, true);
+    argumentNameList = argumentNameList.concat(factorArgumentNameList);
+
+    // Shift the firstArgIndex to take this factor's argument names into account.
+    firstArgIndex += factorArgumentNameList.length;
   });
+  if (!noDupCheck) {
+    resolveDuplicatedNames(argumentNameList);
+  }
+  return argumentNameList;
 };
 
-pexprs.Opt.prototype.toArgumentNameList = function(firstArgIndex) {
-  return this.expr.toArgumentNameList(firstArgIndex).map(function(argName) {
+pexprs.Iter.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  var argumentNameList = this.expr.toArgumentNameList(firstArgIndex, noDupCheck)
+    .map(function(exprArgumentString) {
+      return exprArgumentString[exprArgumentString.length - 1] === 's' ?
+          exprArgumentString + 'es' :
+          exprArgumentString + 's';
+    });
+  if (!noDupCheck) {
+    resolveDuplicatedNames(argumentNameList);
+  }
+  return argumentNameList;
+};
+
+pexprs.Opt.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  return this.expr.toArgumentNameList(firstArgIndex, noDupCheck).map(function(argName) {
     return 'opt' + argName[0].toUpperCase() + argName.slice(1);
   });
 };
 
-pexprs.Not.prototype.toArgumentNameList = function(firstArgIndex) {
+pexprs.Not.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
   return [];
 };
 
 pexprs.Lookahead.prototype.toArgumentNameList =
-pexprs.Lex.prototype.toArgumentNameList = function(firstArgIndex) {
-  return this.expr.toArgumentNameList(firstArgIndex);
+pexprs.Lex.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  return this.expr.toArgumentNameList(firstArgIndex, noDupCheck);
 };
 
-pexprs.Apply.prototype.toArgumentNameList = function(firstArgIndex) {
+pexprs.Apply.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
   return [this.ruleName];
 };
 
-pexprs.UnicodeChar.prototype.toArgumentNameList = function(firstArgIndex) {
-  return '$' + firstArgIndex;
+pexprs.UnicodeChar.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  return ['$' + firstArgIndex];
+};
+
+pexprs.Param.prototype.toArgumentNameList = function(firstArgIndex, noDupCheck) {
+  return ['param' + this.index];
 };
 
 // "Value pexprs" (Value, Str, Arr, Obj) are going away soon, so we don't worry about them here.
@@ -8085,7 +8185,7 @@ var pexprs = require('./pexprs');
 // --------------------------------------------------------------------
 
 // Returns a string representing the PExpr, for use as a UI label, etc.
-pexprs.PExpr.prototype.toDisplayString = common.abstract;
+pexprs.PExpr.prototype.toDisplayString = common.abstract('toDisplayString');
 
 pexprs.Alt.prototype.toDisplayString =
 pexprs.Seq.prototype.toDisplayString =
@@ -8142,35 +8242,34 @@ var pexprs = require('./pexprs');
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.toFailure = common.abstract;
+pexprs.PExpr.prototype.toFailure = function(grammar) {
+  return new Failure(this, 'something unsupported', 'description');
+};
+//common.abstract('toFailure');
 
 pexprs.any.toFailure = function(grammar) {
-  return new Failure('any object', 'description');
+  return new Failure(this, 'any object', 'description');
 };
 
 pexprs.end.toFailure = function(grammar) {
-  return new Failure('end of input', 'description');
+  return new Failure(this, 'end of input', 'description');
 };
 
 pexprs.Terminal.prototype.toFailure = function(grammar) {
-  return typeof this.obj === 'string' ?
-    new Failure(this.obj, 'string') :
-    new Failure(JSON.stringify(this.obj), 'code');
+  return new Failure(this, this.obj, 'string');
 };
 
 pexprs.Range.prototype.toFailure = function(grammar) {
   // TODO: come up with something better
-  return new Failure(JSON.stringify(this.from) + '..' + JSON.stringify(this.to), 'code');
+  return new Failure(this, JSON.stringify(this.from) + '..' + JSON.stringify(this.to), 'code');
 };
 
 pexprs.Not.prototype.toFailure = function(grammar) {
   var description = this.expr === pexprs.any ?
       'nothing' :
       'not ' + this.expr.toFailure(grammar);
-  return new Failure(description, 'description');
+  return new Failure(this, description, 'description');
 };
-
-// TODO: think about Arr, Str, and Obj
 
 pexprs.Apply.prototype.toFailure = function(grammar) {
   var description = grammar.ruleDescriptions[this.ruleName];
@@ -8178,11 +8277,11 @@ pexprs.Apply.prototype.toFailure = function(grammar) {
     var article = (/^[aeiouAEIOU]/.test(this.ruleName) ? 'an' : 'a');
     description = article + ' ' + this.ruleName;
   }
-  return new Failure(description, 'description');
+  return new Failure(this, description, 'description');
 };
 
 pexprs.UnicodeChar.prototype.toFailure = function(grammar) {
-  return new Failure(this.toDisplayString(), 'description');
+  return new Failure(this, this.toDisplayString(), 'description');
 };
 
 },{"./Failure":37,"./common":48,"./pexprs":67}],66:[function(require,module,exports){
@@ -8206,7 +8305,7 @@ var pexprs = require('./pexprs');
   ~"b" "a" and "a" are interchangeable in any grammar,
   both in terms of the languages they accept and their arities.
 */
-pexprs.PExpr.prototype.toString = common.abstract;
+pexprs.PExpr.prototype.toString = common.abstract('toString');
 
 pexprs.any.toString = function() {
   return 'any';
