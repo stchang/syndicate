@@ -105,7 +105,7 @@ Syndicate.Actor.createFacet()
             });
           }
         }
-var _cachedAssertion1468254187624_0 = (function() { var _ = Syndicate.__; return fromBroker(wsurl, locationRecord(id, email, _, _, _)); })();
+var _cachedAssertion1470084347961_0 = (function() { var _ = Syndicate.__; return fromBroker(wsurl, locationRecord(id, email, _, _, _)); })();
 Syndicate.Actor.createFacet()
 .addInitBlock((function() {
           marker.addListener('click', Syndicate.Dataspace.wrap(function () {
@@ -132,6 +132,6 @@ Syndicate.Actor.createFacet()
           marker.setMap(null);
           if (selectedMarker === marker) selectedMarker = null;
         }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1468254187624_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1468254187624_0, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); })();
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1470084347961_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1470084347961_0, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); })();
   });
 }).startStepping();

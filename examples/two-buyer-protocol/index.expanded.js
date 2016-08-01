@@ -107,10 +107,10 @@ function seller() {
     (function () { 
 Syndicate.Actor.createFacet()
 .onEvent(false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(bookQuote(_, _)), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(bookQuote((Syndicate._$("title")), _)), metalevel: 0 }; }), (function(title) { 
-var _cachedAssertion1468254190138_0 = (function() { var _ = Syndicate.__; return Syndicate.observe(bookQuote(title, _)); })();
+var _cachedAssertion1470084350531_0 = (function() { var _ = Syndicate.__; return Syndicate.observe(bookQuote(title, _)); })();
 Syndicate.Actor.createFacet()
 .addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(bookQuote(title, this.priceOf(title)), 0); }))
-.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1468254190138_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1468254190138_0, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); })();
+.onEvent(true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1470084350531_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1470084350531_0, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); })();
 
 /// It also responds to order requests.
 
