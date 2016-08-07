@@ -1,7 +1,7 @@
 ```racket
 (actor
- (forever #:collect [(balance 0)]
-   (assert (account balance))
-   (on (message (deposit $amount))
-       (+ balance amount))))
+ (react (field [balance 0])
+        (assert (account (balance)))
+        (on (message (deposit $amount))
+            (balance (+ (balance) amount)))))
 ```
