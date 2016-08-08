@@ -10,7 +10,7 @@ var path = require('path');
 var ohm = require('ohm-js');
 var ES5 = require('./es5.js');
 
-var grammarSource = Buffer("Ly8gLSotIGphdmFzY3JpcHQgLSotCi8vIFN5bnRhY3RpYyBleHRlbnNpb25zIHRvIEVTNSBmb3IgU3luZGljYXRlL2pzLiBTZWUgY29tcGlsZXIuanMgZm9yCi8vIHRoZSByZXN0IG9mIHRoZSB0cmFuc2xhdG9yLgoKU3luZGljYXRlIDw6IEVTNSB7CiAgLy8tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KICAvLyBFeHRlbnNpb25zIHRvIGV4cHJlc3Npb25zLgoKICBTdGF0ZW1lbnQKICAgICs9IEFjdG9yU3RhdGVtZW50CiAgICB8IERhdGFzcGFjZVN0YXRlbWVudAogICAgfCBBY3RvckZhY2V0U3RhdGVtZW50CiAgICB8IEFzc2VydGlvblR5cGVEZWNsYXJhdGlvblN0YXRlbWVudAogICAgfCBGaWVsZERlY2xhcmF0aW9uU3RhdGVtZW50CiAgICB8IFNlbmRNZXNzYWdlU3RhdGVtZW50CgogIEZ1bmN0aW9uQm9keUJsb2NrID0gInsiIEZ1bmN0aW9uQm9keSAifSIgICAvLyBvZGQgdGhhdCB0aGlzIGlzbid0IGluIGVzNS5vaG0gc29tZXdoZXJlCgogIEFjdG9yU3RhdGVtZW50CiAgICA9IGFjdG9yIChuYW1lZCBFeHByZXNzaW9uPHdpdGhJbj4pPyBGdW5jdGlvbkJvZHlCbG9jawoKICBEYXRhc3BhY2VTdGF0ZW1lbnQKICAgID0gZ3JvdW5kIGRhdGFzcGFjZSBpZGVudGlmaWVyPyBGdW5jdGlvbkJvZHlCbG9jayAtLSBncm91bmQKICAgIHwgZGF0YXNwYWNlIEZ1bmN0aW9uQm9keUJsb2NrICAgICAgICAgICAgICAgICAgICAtLSBub3JtYWwKCiAgQWN0b3JGYWNldFN0YXRlbWVudAogICAgPSByZWFjdCBGYWNldEJsb2NrIHVudGlsIEZhY2V0U3RhdGVUcmFuc2l0aW9uQmxvY2sgICAtLSBzdGF0ZQogICAgfCByZWFjdCB1bnRpbCBGYWNldFN0YXRlVHJhbnNpdGlvbkJsb2NrICAgICAgICAgICAgICAtLSB1bnRpbAogICAgfCByZWFjdCBGYWNldEJsb2NrICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBmb3JldmVyCgogIEFzc2VydGlvblR5cGVEZWNsYXJhdGlvblN0YXRlbWVudAogICAgPSAoYXNzZXJ0aW9uIHwgbWVzc2FnZSkgdHlwZSBpZGVudGlmaWVyICIoIiBGb3JtYWxQYXJhbWV0ZXJMaXN0ICIpIiAoIj0iIHN0cmluZ0xpdGVyYWwpPyAjKHNjKQoKICBGaWVsZERlY2xhcmF0aW9uU3RhdGVtZW50ID0gZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAiPSIgQXNzaWdubWVudEV4cHJlc3Npb248d2l0aEluPiAjKHNjKQogIE1lbWJlckV4cHJlc3Npb24gKz0gZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAtLSBmaWVsZFJlZkV4cAogIFVuYXJ5RXhwcmVzc2lvbiArPSBkZWxldGUgZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAtLSBmaWVsZERlbEV4cAoKICBTZW5kTWVzc2FnZVN0YXRlbWVudCA9ICI6OiIgRXhwcmVzc2lvbjx3aXRoSW4+ICMoc2MpCgogIC8vLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiAgLy8gT25nb2luZyBldmVudCBoYW5kbGVycy4KCiAgRmFjZXRCbG9jayA9ICJ7IgogICAgKFZhcmlhYmxlU3RhdGVtZW50IHwgRmllbGREZWNsYXJhdGlvblN0YXRlbWVudCB8IEZ1bmN0aW9uRGVjbGFyYXRpb24pKgogICAgRmFjZXRJbml0QmxvY2s/CiAgICBGYWNldFNpdHVhdGlvbioKICAgIEZhY2V0RG9uZUJsb2NrPwogICAgIn0iCiAgRmFjZXRTdGF0ZVRyYW5zaXRpb25CbG9jayA9ICJ7IiBGYWNldFN0YXRlVHJhbnNpdGlvbiogIn0iCgogIEZhY2V0SW5pdEJsb2NrID0gZG8gRnVuY3Rpb25Cb2R5QmxvY2sKICBGYWNldERvbmVCbG9jayA9IGZpbmFsbHkgRnVuY3Rpb25Cb2R5QmxvY2sKCiAgRmFjZXRTaXR1YXRpb24KICAgID0gYXNzZXJ0IEZhY2V0UGF0dGVybiBBc3NlcnRXaGVuQ2xhdXNlPyAjKHNjKSAgICAgICAgICAgICAgICAgICAgICAtLSBhc3NlcnQKICAgIHwgb24gRmFjZXRFdmVudFBhdHRlcm4gRnVuY3Rpb25Cb2R5QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBldmVudAogICAgfCBvbiBldmVudCBpZGVudGlmaWVyIEZ1bmN0aW9uQm9keUJsb2NrICAgICAgICAgICAgICAgICAgICAgICAgICAgIC0tIG9uRXZlbnQKICAgIHwgZGF0YWZsb3cgRnVuY3Rpb25Cb2R5QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBkYXRhZmxvdwogICAgfCBkdXJpbmcgRmFjZXRQYXR0ZXJuIEZhY2V0QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC0tIGR1cmluZwogICAgfCBkdXJpbmcgRmFjZXRQYXR0ZXJuIGFjdG9yIChuYW1lZCBFeHByZXNzaW9uPHdpdGhJbj4pPyBGYWNldEJsb2NrIC0tIGR1cmluZ0FjdG9yCgogIEFzc2VydFdoZW5DbGF1c2UgPSB3aGVuICIoIiBFeHByZXNzaW9uPHdpdGhJbj4gIikiCgogIEZhY2V0RXZlbnRQYXR0ZXJuCiAgICA9IG1lc3NhZ2UgRmFjZXRQYXR0ZXJuICAgLS0gbWVzc2FnZUV2ZW50CiAgICB8IGFzc2VydGVkIEZhY2V0UGF0dGVybiAgLS0gYXNzZXJ0ZWRFdmVudAogICAgfCByZXRyYWN0ZWQgRmFjZXRQYXR0ZXJuIC0tIHJldHJhY3RlZEV2ZW50CgogIEZhY2V0VHJhbnNpdGlvbkV2ZW50UGF0dGVybgogICAgPSBGYWNldEV2ZW50UGF0dGVybiAgICAgICAgICAtLSBmYWNldEV2ZW50CiAgICB8ICIoIiBFeHByZXNzaW9uPHdpdGhJbj4gIikiIC0tIHJpc2luZ0VkZ2UKCiAgRmFjZXRTdGF0ZVRyYW5zaXRpb24KICAgID0gY2FzZSBGYWNldFRyYW5zaXRpb25FdmVudFBhdHRlcm4gRnVuY3Rpb25Cb2R5QmxvY2sgLS0gd2l0aENvbnRpbnVhdGlvbgogICAgfCBjYXNlIEZhY2V0VHJhbnNpdGlvbkV2ZW50UGF0dGVybiAjKHNjKSAgICAgICAgICAgICAtLSBub0NvbnRpbnVhdGlvbgoKICBGYWNldFBhdHRlcm4KICAgID0gTGVmdEhhbmRTaWRlRXhwcmVzc2lvbiBtZXRhbGV2ZWwgZGVjaW1hbEludGVnZXJMaXRlcmFsIC0tIHdpdGhNZXRhbGV2ZWwKICAgIHwgTGVmdEhhbmRTaWRlRXhwcmVzc2lvbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC0tIG5vTWV0YWxldmVsCgogIC8vLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiAgLy8gS2V5d29yZHMuIFdlIGRvbid0IGFkZCB0aGVtIHRvIHRoZSAia2V5d29yZCIgcHJvZHVjdGlvbiBiZWNhdXNlCiAgLy8gd2UgZG9uJ3Qgd2FudCB0byBtYWtlIHRoZW0gdW5hdmFpbGFibGUgdG8gcHJvZ3JhbXMgYXMKICAvLyBpZGVudGlmaWVycy4KCiAgYWN0b3IgPSAiYWN0b3IiIH5pZGVudGlmaWVyUGFydAogIGFzc2VydCA9ICJhc3NlcnQiIH5pZGVudGlmaWVyUGFydAogIGFzc2VydGVkID0gImFzc2VydGVkIiB+aWRlbnRpZmllclBhcnQKICBhc3NlcnRpb24gPSAiYXNzZXJ0aW9uIiB+aWRlbnRpZmllclBhcnQKICBkYXRhZmxvdyA9ICJkYXRhZmxvdyIgfmlkZW50aWZpZXJQYXJ0CiAgZGF0YXNwYWNlID0gImRhdGFzcGFjZSIgfmlkZW50aWZpZXJQYXJ0CiAgZHVyaW5nID0gImR1cmluZyIgfmlkZW50aWZpZXJQYXJ0CiAgZXZlbnQgPSAiZXZlbnQiIH5pZGVudGlmaWVyUGFydAogIGZpZWxkID0gImZpZWxkIiB+aWRlbnRpZmllclBhcnQKICBncm91bmQgPSAiZ3JvdW5kIiB+aWRlbnRpZmllclBhcnQKICBtZXNzYWdlID0gIm1lc3NhZ2UiIH5pZGVudGlmaWVyUGFydAogIG1ldGFsZXZlbCA9ICJtZXRhbGV2ZWwiIH5pZGVudGlmaWVyUGFydAogIG5hbWVkID0gIm5hbWVkIiB+aWRlbnRpZmllclBhcnQKICBvbiA9ICJvbiIgfmlkZW50aWZpZXJQYXJ0CiAgcmVhY3QgPSAicmVhY3QiIH5pZGVudGlmaWVyUGFydAogIHJldHJhY3RlZCA9ICJyZXRyYWN0ZWQiIH5pZGVudGlmaWVyUGFydAogIHR5cGUgPSAidHlwZSIgfmlkZW50aWZpZXJQYXJ0CiAgdW50aWwgPSAidW50aWwiIH5pZGVudGlmaWVyUGFydAogIHdoZW4gPSAid2hlbiIgfmlkZW50aWZpZXJQYXJ0Cn0K","base64").toString();
+var grammarSource = Buffer("Ly8gLSotIGphdmFzY3JpcHQgLSotCi8vIFN5bnRhY3RpYyBleHRlbnNpb25zIHRvIEVTNSBmb3IgU3luZGljYXRlL2pzLiBTZWUgY29tcGlsZXIuanMgZm9yCi8vIHRoZSByZXN0IG9mIHRoZSB0cmFuc2xhdG9yLgoKU3luZGljYXRlIDw6IEVTNSB7CiAgLy8tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KICAvLyBFeHRlbnNpb25zIHRvIGV4cHJlc3Npb25zLgoKICBTdGF0ZW1lbnQKICAgICs9IEFjdG9yU3RhdGVtZW50CiAgICB8IERhdGFzcGFjZVN0YXRlbWVudAogICAgfCBBY3RvckZhY2V0U3RhdGVtZW50CiAgICB8IEFzc2VydGlvblR5cGVEZWNsYXJhdGlvblN0YXRlbWVudAogICAgfCBGaWVsZERlY2xhcmF0aW9uU3RhdGVtZW50CiAgICB8IFNlbmRNZXNzYWdlU3RhdGVtZW50CgogIEZ1bmN0aW9uQm9keUJsb2NrID0gInsiIEZ1bmN0aW9uQm9keSAifSIgICAvLyBvZGQgdGhhdCB0aGlzIGlzbid0IGluIGVzNS5vaG0gc29tZXdoZXJlCgogIEFjdG9yU3RhdGVtZW50CiAgICA9IGFjdG9yIChuYW1lZCBFeHByZXNzaW9uPHdpdGhJbj4pPyBGdW5jdGlvbkJvZHlCbG9jawoKICBEYXRhc3BhY2VTdGF0ZW1lbnQKICAgID0gZ3JvdW5kIGRhdGFzcGFjZSBpZGVudGlmaWVyPyBGdW5jdGlvbkJvZHlCbG9jayAtLSBncm91bmQKICAgIHwgZGF0YXNwYWNlIEZ1bmN0aW9uQm9keUJsb2NrICAgICAgICAgICAgICAgICAgICAtLSBub3JtYWwKCiAgQWN0b3JGYWNldFN0YXRlbWVudAogICAgPSByZWFjdCBGYWNldEJsb2NrIHVudGlsIEZhY2V0U3RhdGVUcmFuc2l0aW9uQmxvY2sgICAtLSBzdGF0ZQogICAgfCByZWFjdCB1bnRpbCBGYWNldFN0YXRlVHJhbnNpdGlvbkJsb2NrICAgICAgICAgICAgICAtLSB1bnRpbAogICAgfCByZWFjdCBGYWNldEJsb2NrICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBmb3JldmVyCgogIEFzc2VydGlvblR5cGVEZWNsYXJhdGlvblN0YXRlbWVudAogICAgPSAoYXNzZXJ0aW9uIHwgbWVzc2FnZSkgdHlwZSBpZGVudGlmaWVyICIoIiBGb3JtYWxQYXJhbWV0ZXJMaXN0ICIpIiAoIj0iIHN0cmluZ0xpdGVyYWwpPyAjKHNjKQoKICBGaWVsZERlY2xhcmF0aW9uU3RhdGVtZW50ID0gZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAoIj0iIEFzc2lnbm1lbnRFeHByZXNzaW9uPHdpdGhJbj4pPyAjKHNjKQogIE1lbWJlckV4cHJlc3Npb24gKz0gZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAtLSBmaWVsZFJlZkV4cAogIFVuYXJ5RXhwcmVzc2lvbiArPSBkZWxldGUgZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAtLSBmaWVsZERlbEV4cAoKICBTZW5kTWVzc2FnZVN0YXRlbWVudCA9ICI6OiIgRXhwcmVzc2lvbjx3aXRoSW4+ICMoc2MpCgogIC8vLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiAgLy8gT25nb2luZyBldmVudCBoYW5kbGVycy4KCiAgRmFjZXRCbG9jayA9ICJ7IgogICAgKFZhcmlhYmxlU3RhdGVtZW50IHwgRmllbGREZWNsYXJhdGlvblN0YXRlbWVudCB8IEZ1bmN0aW9uRGVjbGFyYXRpb24pKgogICAgRmFjZXRJbml0QmxvY2s/CiAgICBGYWNldFNpdHVhdGlvbioKICAgIEZhY2V0RG9uZUJsb2NrPwogICAgIn0iCiAgRmFjZXRTdGF0ZVRyYW5zaXRpb25CbG9jayA9ICJ7IiBGYWNldFN0YXRlVHJhbnNpdGlvbiogIn0iCgogIEZhY2V0SW5pdEJsb2NrID0gZG8gRnVuY3Rpb25Cb2R5QmxvY2sKICBGYWNldERvbmVCbG9jayA9IGZpbmFsbHkgRnVuY3Rpb25Cb2R5QmxvY2sKCiAgRmFjZXRTaXR1YXRpb24KICAgID0gYXNzZXJ0IEZhY2V0UGF0dGVybiBBc3NlcnRXaGVuQ2xhdXNlPyAjKHNjKSAgICAgICAgICAgICAgICAgICAgICAtLSBhc3NlcnQKICAgIHwgb24gRmFjZXRFdmVudFBhdHRlcm4gRnVuY3Rpb25Cb2R5QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBldmVudAogICAgfCBvbiBldmVudCBpZGVudGlmaWVyIEZ1bmN0aW9uQm9keUJsb2NrICAgICAgICAgICAgICAgICAgICAgICAgICAgIC0tIG9uRXZlbnQKICAgIHwgZGF0YWZsb3cgRnVuY3Rpb25Cb2R5QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBkYXRhZmxvdwogICAgfCBkdXJpbmcgRmFjZXRQYXR0ZXJuIEZhY2V0QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC0tIGR1cmluZwogICAgfCBkdXJpbmcgRmFjZXRQYXR0ZXJuIGFjdG9yIChuYW1lZCBFeHByZXNzaW9uPHdpdGhJbj4pPyBGYWNldEJsb2NrIC0tIGR1cmluZ0FjdG9yCgogIEFzc2VydFdoZW5DbGF1c2UgPSB3aGVuICIoIiBFeHByZXNzaW9uPHdpdGhJbj4gIikiCgogIEZhY2V0RXZlbnRQYXR0ZXJuCiAgICA9IG1lc3NhZ2UgRmFjZXRQYXR0ZXJuICAgLS0gbWVzc2FnZUV2ZW50CiAgICB8IGFzc2VydGVkIEZhY2V0UGF0dGVybiAgLS0gYXNzZXJ0ZWRFdmVudAogICAgfCByZXRyYWN0ZWQgRmFjZXRQYXR0ZXJuIC0tIHJldHJhY3RlZEV2ZW50CgogIEZhY2V0VHJhbnNpdGlvbkV2ZW50UGF0dGVybgogICAgPSBGYWNldEV2ZW50UGF0dGVybiAgICAgICAgICAtLSBmYWNldEV2ZW50CiAgICB8ICIoIiBFeHByZXNzaW9uPHdpdGhJbj4gIikiIC0tIHJpc2luZ0VkZ2UKCiAgRmFjZXRTdGF0ZVRyYW5zaXRpb24KICAgID0gY2FzZSBGYWNldFRyYW5zaXRpb25FdmVudFBhdHRlcm4gRnVuY3Rpb25Cb2R5QmxvY2sgLS0gd2l0aENvbnRpbnVhdGlvbgogICAgfCBjYXNlIEZhY2V0VHJhbnNpdGlvbkV2ZW50UGF0dGVybiAjKHNjKSAgICAgICAgICAgICAtLSBub0NvbnRpbnVhdGlvbgoKICBGYWNldFBhdHRlcm4KICAgID0gTGVmdEhhbmRTaWRlRXhwcmVzc2lvbiBtZXRhbGV2ZWwgZGVjaW1hbEludGVnZXJMaXRlcmFsIC0tIHdpdGhNZXRhbGV2ZWwKICAgIHwgTGVmdEhhbmRTaWRlRXhwcmVzc2lvbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC0tIG5vTWV0YWxldmVsCgogIC8vLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiAgLy8gS2V5d29yZHMuIFdlIGRvbid0IGFkZCB0aGVtIHRvIHRoZSAia2V5d29yZCIgcHJvZHVjdGlvbiBiZWNhdXNlCiAgLy8gd2UgZG9uJ3Qgd2FudCB0byBtYWtlIHRoZW0gdW5hdmFpbGFibGUgdG8gcHJvZ3JhbXMgYXMKICAvLyBpZGVudGlmaWVycy4KCiAgYWN0b3IgPSAiYWN0b3IiIH5pZGVudGlmaWVyUGFydAogIGFzc2VydCA9ICJhc3NlcnQiIH5pZGVudGlmaWVyUGFydAogIGFzc2VydGVkID0gImFzc2VydGVkIiB+aWRlbnRpZmllclBhcnQKICBhc3NlcnRpb24gPSAiYXNzZXJ0aW9uIiB+aWRlbnRpZmllclBhcnQKICBkYXRhZmxvdyA9ICJkYXRhZmxvdyIgfmlkZW50aWZpZXJQYXJ0CiAgZGF0YXNwYWNlID0gImRhdGFzcGFjZSIgfmlkZW50aWZpZXJQYXJ0CiAgZHVyaW5nID0gImR1cmluZyIgfmlkZW50aWZpZXJQYXJ0CiAgZXZlbnQgPSAiZXZlbnQiIH5pZGVudGlmaWVyUGFydAogIGZpZWxkID0gImZpZWxkIiB+aWRlbnRpZmllclBhcnQKICBncm91bmQgPSAiZ3JvdW5kIiB+aWRlbnRpZmllclBhcnQKICBtZXNzYWdlID0gIm1lc3NhZ2UiIH5pZGVudGlmaWVyUGFydAogIG1ldGFsZXZlbCA9ICJtZXRhbGV2ZWwiIH5pZGVudGlmaWVyUGFydAogIG5hbWVkID0gIm5hbWVkIiB+aWRlbnRpZmllclBhcnQKICBvbiA9ICJvbiIgfmlkZW50aWZpZXJQYXJ0CiAgcmVhY3QgPSAicmVhY3QiIH5pZGVudGlmaWVyUGFydAogIHJldHJhY3RlZCA9ICJyZXRyYWN0ZWQiIH5pZGVudGlmaWVyUGFydAogIHR5cGUgPSAidHlwZSIgfmlkZW50aWZpZXJQYXJ0CiAgdW50aWwgPSAidW50aWwiIH5pZGVudGlmaWVyUGFydAogIHdoZW4gPSAid2hlbiIgfmlkZW50aWZpZXJQYXJ0Cn0K","base64").toString();
 var grammar = ohm.grammar(grammarSource, { ES5: ES5.grammar });
 var semantics = grammar.extendSemantics(ES5.semantics);
 
@@ -131,9 +131,11 @@ var modifiedSourceActions = {
       label + ', ' + JSON.stringify(formals) + ');';
   },
 
-  FieldDeclarationStatement: function(_field, memberExpr, _eq, initExpr, sc) {
+  FieldDeclarationStatement: function(_field, memberExpr, _eq, maybeInitExpr, sc) {
     return 'Syndicate.Actor.declareField(' + memberExpr.memberObjectExpr.asES5 + ', ' +
-      memberExpr.memberPropExpr.asES5 + ', ' + initExpr.asES5 + ')' +
+      memberExpr.memberPropExpr.asES5 + ', ' +
+      (maybeInitExpr.numChildren === 1 ? maybeInitExpr.asES5 : 'undefined') +
+      ')' +
       sc.interval.contents;
   },
 
@@ -2778,6 +2780,9 @@ var currentQueue;
 var queueIndex = -1;
 
 function cleanUpNextTick() {
+    if (!draining || !currentQueue) {
+        return;
+    }
     draining = false;
     if (currentQueue.length) {
         queue = currentQueue.concat(queue);
@@ -5939,10 +5944,13 @@ escapeStringFor['\u000b'.charCodeAt(0)] = '\\v';
 // Exports
 // --------------------------------------------------------------------
 
-exports.abstract = function() {
-  throw new Error(
-      'this method is abstract! ' +
+exports.abstract = function(optMethodName) {
+  var methodName = optMethodName || '';
+  return function() {
+    throw new Error(
+      'this method ' + methodName + ' is abstract! ' +
       '(it has no implementation in class ' + this.constructor.name + ')');
+  };
 };
 
 exports.assert = function(cond, message) {
@@ -6869,7 +6877,9 @@ var pexprs = require('./pexprs');
 /*
   Return true if we should skip spaces preceding this expression in a syntactic context.
 */
-pexprs.PExpr.prototype.allowsSkippingPrecedingSpace = common.abstract;
+pexprs.PExpr.prototype.allowsSkippingPrecedingSpace = common.abstract(
+  'allowsSkippingPrecedingSpace'
+);
 
 /*
   Generally, these are all first-order expressions that operate on strings and (with the
@@ -6920,7 +6930,9 @@ pexprs.PExpr.prototype.assertAllApplicationsAreValid = function(ruleName, gramma
   this._assertAllApplicationsAreValid(ruleName, grammar);
 };
 
-pexprs.PExpr.prototype._assertAllApplicationsAreValid = common.abstract;
+pexprs.PExpr.prototype._assertAllApplicationsAreValid = common.abstract(
+  '_assertAllApplicationsAreValid'
+);
 
 pexprs.any._assertAllApplicationsAreValid =
 pexprs.end._assertAllApplicationsAreValid =
@@ -7000,7 +7012,9 @@ var pexprs = require('./pexprs');
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.assertChoicesHaveUniformArity = common.abstract;
+pexprs.PExpr.prototype.assertChoicesHaveUniformArity = common.abstract(
+  'assertChoicesHaveUniformArity'
+);
 
 pexprs.any.assertChoicesHaveUniformArity =
 pexprs.end.assertChoicesHaveUniformArity =
@@ -7075,7 +7089,9 @@ var pexprs = require('./pexprs');
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.assertIteratedExprsAreNotNullable = common.abstract;
+pexprs.PExpr.prototype.assertIteratedExprsAreNotNullable = common.abstract(
+  'assertIteratedExprsAreNotNullable'
+);
 
 pexprs.any.assertIteratedExprsAreNotNullable =
 pexprs.end.assertIteratedExprsAreNotNullable =
@@ -7135,7 +7151,7 @@ var pexprs = require('./pexprs');
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.check = common.abstract;
+pexprs.PExpr.prototype.check = common.abstract('check');
 
 pexprs.any.check = function(grammar, vals) {
   return vals.length >= 1;
@@ -7278,7 +7294,7 @@ var IterationNode = nodes.IterationNode;
   Note that `State.prototype.eval(expr)`, unlike this method, guarantees that neither the state
   object's bindings nor its input stream's position will change if the expression fails to match.
 */
-pexprs.PExpr.prototype.eval = common.abstract;  // function(state) { ... }
+pexprs.PExpr.prototype.eval = common.abstract('eval');  // function(state) { ... }
 
 pexprs.any.eval = function(state) {
   var inputStream = state.inputStream;
@@ -7615,7 +7631,7 @@ var pexprs = require('./pexprs');
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.getArity = common.abstract;
+pexprs.PExpr.prototype.getArity = common.abstract('getArity');
 
 pexprs.any.getArity =
 pexprs.end.getArity =
@@ -7673,7 +7689,7 @@ var pexprs = require('./pexprs');
   parameter with a `Param` node. Returns a PExpr -- either a new one, or the original one if
   it was modified in place.
 */
-pexprs.PExpr.prototype.introduceParams = common.abstract;
+pexprs.PExpr.prototype.introduceParams = common.abstract('introduceParams');
 
 pexprs.any.introduceParams =
 pexprs.end.introduceParams =
@@ -7741,7 +7757,7 @@ pexprs.PExpr.prototype.isNullable = function(grammar) {
   return this._isNullable(grammar, Object.create(null));
 };
 
-pexprs.PExpr.prototype._isNullable = common.abstract;
+pexprs.PExpr.prototype._isNullable = common.abstract('_isNullable');
 
 pexprs.any._isNullable =
 pexprs.Range.prototype._isNullable =
@@ -7833,7 +7849,7 @@ function getIntervalInfo(expr, grammarInterval) {
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.outputRecipe = common.abstract;
+pexprs.PExpr.prototype.outputRecipe = common.abstract('outputRecipe');
 
 pexprs.any.outputRecipe = function(sb, formals, grammarInterval) {
   throw new Error('should never output a recipe for `any` expression');
@@ -7944,7 +7960,8 @@ var pexprs = require('./pexprs');
 
   The receiver must not be modified; a new PExpr must be returned if any replacement is necessary.
 */
-pexprs.PExpr.prototype.substituteParams = common.abstract;  // function(actuals) { ... }
+// function(actuals) { ... }
+pexprs.PExpr.prototype.substituteParams = common.abstract('substituteParams');
 
 pexprs.any.substituteParams =
 pexprs.end.substituteParams =
@@ -8023,7 +8040,8 @@ var copyWithoutDuplicates = common.copyWithoutDuplicates;
     not have any Alt sub-expressions with inconsistent arities.
   * e.getArity() === e.toArgumentNameList(1).length
 */
-pexprs.PExpr.prototype.toArgumentNameList = common.abstract;  // function(firstArgIndex) { ... }
+// function(firstArgIndex) { ... }
+pexprs.PExpr.prototype.toArgumentNameList = common.abstract('toArgumentNameList');
 
 pexprs.any.toArgumentNameList = function(firstArgIndex) {
   return ['any'];
@@ -8152,7 +8170,7 @@ var pexprs = require('./pexprs');
 // --------------------------------------------------------------------
 
 // Returns a string representing the PExpr, for use as a UI label, etc.
-pexprs.PExpr.prototype.toDisplayString = common.abstract;
+pexprs.PExpr.prototype.toDisplayString = common.abstract('toDisplayString');
 
 pexprs.Alt.prototype.toDisplayString =
 pexprs.Seq.prototype.toDisplayString =
@@ -8209,7 +8227,7 @@ var pexprs = require('./pexprs');
 // Operations
 // --------------------------------------------------------------------
 
-pexprs.PExpr.prototype.toFailure = common.abstract;
+pexprs.PExpr.prototype.toFailure = common.abstract('toFailure');
 
 pexprs.any.toFailure = function(grammar) {
   return new Failure('any object', 'description');
@@ -8273,7 +8291,7 @@ var pexprs = require('./pexprs');
   ~"b" "a" and "a" are interchangeable in any grammar,
   both in terms of the languages they accept and their arities.
 */
-pexprs.PExpr.prototype.toString = common.abstract;
+pexprs.PExpr.prototype.toString = common.abstract('toString');
 
 pexprs.any.toString = function() {
   return 'any';
