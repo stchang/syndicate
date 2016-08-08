@@ -105,7 +105,7 @@ Syndicate.Actor.createFacet()
             });
           }
         }
-var _cachedAssertion1470621737576_0 = (function() { var _ = Syndicate.__; return fromBroker(this.wsurl, locationRecord(id, email, _, _, _)); }).call(this);
+var _cachedAssertion1470624652650_0 = (function() { var _ = Syndicate.__; return fromBroker(this.wsurl, locationRecord(id, email, _, _, _)); }).call(this);
 Syndicate.Actor.createFacet()
 .addInitBlock((function() {
           marker.addListener('click', Syndicate.Dataspace.wrap(function () {
@@ -132,6 +132,6 @@ Syndicate.Actor.createFacet()
           marker.setMap(null);
           if (selectedMarker === marker) selectedMarker = null;
         }))
-.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1470621737576_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1470621737576_0, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); }).call(this);
+.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1470624652650_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1470624652650_0, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); }).call(this);
   });
 }).startStepping();
