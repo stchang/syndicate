@@ -10,7 +10,7 @@ var path = require('path');
 var ohm = require('ohm-js');
 var ES5 = require('./es5.js');
 
-var grammarSource = Buffer("Ly8gLSotIGphdmFzY3JpcHQgLSotCi8vIFN5bnRhY3RpYyBleHRlbnNpb25zIHRvIEVTNSBmb3IgU3luZGljYXRlL2pzLiBTZWUgY29tcGlsZXIuanMgZm9yCi8vIHRoZSByZXN0IG9mIHRoZSB0cmFuc2xhdG9yLgoKU3luZGljYXRlIDw6IEVTNSB7CiAgLy8tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KICAvLyBFeHRlbnNpb25zIHRvIGV4cHJlc3Npb25zLgoKICBTdGF0ZW1lbnQKICAgICs9IEFjdG9yU3RhdGVtZW50CiAgICB8IERhdGFzcGFjZVN0YXRlbWVudAogICAgfCBBY3RvckZhY2V0U3RhdGVtZW50CiAgICB8IEFzc2VydGlvblR5cGVEZWNsYXJhdGlvblN0YXRlbWVudAogICAgfCBGaWVsZERlY2xhcmF0aW9uU3RhdGVtZW50CiAgICB8IFNlbmRNZXNzYWdlU3RhdGVtZW50CgogIEZ1bmN0aW9uQm9keUJsb2NrID0gInsiIEZ1bmN0aW9uQm9keSAifSIgICAvLyBvZGQgdGhhdCB0aGlzIGlzbid0IGluIGVzNS5vaG0gc29tZXdoZXJlCgogIEFjdG9yU3RhdGVtZW50CiAgICA9IGFjdG9yIChuYW1lZCBFeHByZXNzaW9uPHdpdGhJbj4pPyBGdW5jdGlvbkJvZHlCbG9jawoKICBEYXRhc3BhY2VTdGF0ZW1lbnQKICAgID0gZ3JvdW5kIGRhdGFzcGFjZSBpZGVudGlmaWVyPyBGdW5jdGlvbkJvZHlCbG9jayAtLSBncm91bmQKICAgIHwgZGF0YXNwYWNlIEZ1bmN0aW9uQm9keUJsb2NrICAgICAgICAgICAgICAgICAgICAtLSBub3JtYWwKCiAgQWN0b3JGYWNldFN0YXRlbWVudAogICAgPSByZWFjdCBGYWNldEJsb2NrIHVudGlsIEZhY2V0U3RhdGVUcmFuc2l0aW9uQmxvY2sgICAtLSBzdGF0ZQogICAgfCByZWFjdCB1bnRpbCBGYWNldFN0YXRlVHJhbnNpdGlvbkJsb2NrICAgICAgICAgICAgICAtLSB1bnRpbAogICAgfCByZWFjdCBGYWNldEJsb2NrICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBmb3JldmVyCgogIEFzc2VydGlvblR5cGVEZWNsYXJhdGlvblN0YXRlbWVudAogICAgPSAoYXNzZXJ0aW9uIHwgbWVzc2FnZSkgdHlwZSBpZGVudGlmaWVyICIoIiBGb3JtYWxQYXJhbWV0ZXJMaXN0ICIpIiAoIj0iIHN0cmluZ0xpdGVyYWwpPyAjKHNjKQoKICBGaWVsZERlY2xhcmF0aW9uU3RhdGVtZW50ID0gZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAoIj0iIEFzc2lnbm1lbnRFeHByZXNzaW9uPHdpdGhJbj4pPyAjKHNjKQogIE1lbWJlckV4cHJlc3Npb24gKz0gZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAtLSBmaWVsZFJlZkV4cAogIFVuYXJ5RXhwcmVzc2lvbiArPSBkZWxldGUgZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAtLSBmaWVsZERlbEV4cAoKICBTZW5kTWVzc2FnZVN0YXRlbWVudCA9ICI6OiIgRXhwcmVzc2lvbjx3aXRoSW4+ICMoc2MpCgogIC8vLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiAgLy8gT25nb2luZyBldmVudCBoYW5kbGVycy4KCiAgRmFjZXRCbG9jayA9ICJ7IgogICAgKFZhcmlhYmxlU3RhdGVtZW50IHwgRmllbGREZWNsYXJhdGlvblN0YXRlbWVudCB8IEZ1bmN0aW9uRGVjbGFyYXRpb24pKgogICAgRmFjZXRJbml0QmxvY2s/CiAgICBGYWNldFNpdHVhdGlvbioKICAgIEZhY2V0RG9uZUJsb2NrPwogICAgIn0iCiAgRmFjZXRTdGF0ZVRyYW5zaXRpb25CbG9jayA9ICJ7IiBGYWNldFN0YXRlVHJhbnNpdGlvbiogIn0iCgogIEZhY2V0SW5pdEJsb2NrID0gZG8gRnVuY3Rpb25Cb2R5QmxvY2sKICBGYWNldERvbmVCbG9jayA9IGZpbmFsbHkgRnVuY3Rpb25Cb2R5QmxvY2sKCiAgRmFjZXRTaXR1YXRpb24KICAgID0gYXNzZXJ0IEZhY2V0UGF0dGVybiBBc3NlcnRXaGVuQ2xhdXNlPyAjKHNjKSAgICAgICAgICAgICAgICAgICAgICAtLSBhc3NlcnQKICAgIHwgb24gRmFjZXRFdmVudFBhdHRlcm4gRnVuY3Rpb25Cb2R5QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBldmVudAogICAgfCBvbiBldmVudCBpZGVudGlmaWVyIEZ1bmN0aW9uQm9keUJsb2NrICAgICAgICAgICAgICAgICAgICAgICAgICAgIC0tIG9uRXZlbnQKICAgIHwgZGF0YWZsb3cgRnVuY3Rpb25Cb2R5QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBkYXRhZmxvdwogICAgfCBkdXJpbmcgRmFjZXRQYXR0ZXJuIEZhY2V0QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC0tIGR1cmluZwogICAgfCBkdXJpbmcgRmFjZXRQYXR0ZXJuIGFjdG9yIChuYW1lZCBFeHByZXNzaW9uPHdpdGhJbj4pPyBGYWNldEJsb2NrIC0tIGR1cmluZ0FjdG9yCgogIEFzc2VydFdoZW5DbGF1c2UgPSB3aGVuICIoIiBFeHByZXNzaW9uPHdpdGhJbj4gIikiCgogIEZhY2V0RXZlbnRQYXR0ZXJuCiAgICA9IG1lc3NhZ2UgRmFjZXRQYXR0ZXJuICAgLS0gbWVzc2FnZUV2ZW50CiAgICB8IGFzc2VydGVkIEZhY2V0UGF0dGVybiAgLS0gYXNzZXJ0ZWRFdmVudAogICAgfCByZXRyYWN0ZWQgRmFjZXRQYXR0ZXJuIC0tIHJldHJhY3RlZEV2ZW50CgogIEZhY2V0VHJhbnNpdGlvbkV2ZW50UGF0dGVybgogICAgPSBGYWNldEV2ZW50UGF0dGVybiAgICAgICAgICAtLSBmYWNldEV2ZW50CiAgICB8ICIoIiBFeHByZXNzaW9uPHdpdGhJbj4gIikiIC0tIHJpc2luZ0VkZ2UKCiAgRmFjZXRTdGF0ZVRyYW5zaXRpb24KICAgID0gY2FzZSBGYWNldFRyYW5zaXRpb25FdmVudFBhdHRlcm4gRnVuY3Rpb25Cb2R5QmxvY2sgLS0gd2l0aENvbnRpbnVhdGlvbgogICAgfCBjYXNlIEZhY2V0VHJhbnNpdGlvbkV2ZW50UGF0dGVybiAjKHNjKSAgICAgICAgICAgICAtLSBub0NvbnRpbnVhdGlvbgoKICBGYWNldFBhdHRlcm4KICAgID0gTGVmdEhhbmRTaWRlRXhwcmVzc2lvbiBtZXRhbGV2ZWwgZGVjaW1hbEludGVnZXJMaXRlcmFsIC0tIHdpdGhNZXRhbGV2ZWwKICAgIHwgTGVmdEhhbmRTaWRlRXhwcmVzc2lvbiAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgIC0tIG5vTWV0YWxldmVsCgogIC8vLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tCiAgLy8gS2V5d29yZHMuIFdlIGRvbid0IGFkZCB0aGVtIHRvIHRoZSAia2V5d29yZCIgcHJvZHVjdGlvbiBiZWNhdXNlCiAgLy8gd2UgZG9uJ3Qgd2FudCB0byBtYWtlIHRoZW0gdW5hdmFpbGFibGUgdG8gcHJvZ3JhbXMgYXMKICAvLyBpZGVudGlmaWVycy4KCiAgYWN0b3IgPSAiYWN0b3IiIH5pZGVudGlmaWVyUGFydAogIGFzc2VydCA9ICJhc3NlcnQiIH5pZGVudGlmaWVyUGFydAogIGFzc2VydGVkID0gImFzc2VydGVkIiB+aWRlbnRpZmllclBhcnQKICBhc3NlcnRpb24gPSAiYXNzZXJ0aW9uIiB+aWRlbnRpZmllclBhcnQKICBkYXRhZmxvdyA9ICJkYXRhZmxvdyIgfmlkZW50aWZpZXJQYXJ0CiAgZGF0YXNwYWNlID0gImRhdGFzcGFjZSIgfmlkZW50aWZpZXJQYXJ0CiAgZHVyaW5nID0gImR1cmluZyIgfmlkZW50aWZpZXJQYXJ0CiAgZXZlbnQgPSAiZXZlbnQiIH5pZGVudGlmaWVyUGFydAogIGZpZWxkID0gImZpZWxkIiB+aWRlbnRpZmllclBhcnQKICBncm91bmQgPSAiZ3JvdW5kIiB+aWRlbnRpZmllclBhcnQKICBtZXNzYWdlID0gIm1lc3NhZ2UiIH5pZGVudGlmaWVyUGFydAogIG1ldGFsZXZlbCA9ICJtZXRhbGV2ZWwiIH5pZGVudGlmaWVyUGFydAogIG5hbWVkID0gIm5hbWVkIiB+aWRlbnRpZmllclBhcnQKICBvbiA9ICJvbiIgfmlkZW50aWZpZXJQYXJ0CiAgcmVhY3QgPSAicmVhY3QiIH5pZGVudGlmaWVyUGFydAogIHJldHJhY3RlZCA9ICJyZXRyYWN0ZWQiIH5pZGVudGlmaWVyUGFydAogIHR5cGUgPSAidHlwZSIgfmlkZW50aWZpZXJQYXJ0CiAgdW50aWwgPSAidW50aWwiIH5pZGVudGlmaWVyUGFydAogIHdoZW4gPSAid2hlbiIgfmlkZW50aWZpZXJQYXJ0Cn0K","base64").toString();
+var grammarSource = Buffer("Ly8gLSotIGphdmFzY3JpcHQgLSotCi8vIFN5bnRhY3RpYyBleHRlbnNpb25zIHRvIEVTNSBmb3IgU3luZGljYXRlL2pzLiBTZWUgY29tcGlsZXIuanMgZm9yCi8vIHRoZSByZXN0IG9mIHRoZSB0cmFuc2xhdG9yLgoKU3luZGljYXRlIDw6IEVTNSB7CiAgLy8tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0KICAvLyBFeHRlbnNpb25zIHRvIGV4cHJlc3Npb25zLgoKICBTdGF0ZW1lbnQKICAgICs9IEFjdG9yU3RhdGVtZW50CiAgICB8IERhdGFzcGFjZVN0YXRlbWVudAogICAgfCBBY3RvckZhY2V0U3RhdGVtZW50CiAgICB8IEFjdG9yRW5kcG9pbnRTdGF0ZW1lbnQKICAgIHwgQXNzZXJ0aW9uVHlwZURlY2xhcmF0aW9uU3RhdGVtZW50CiAgICB8IEZpZWxkRGVjbGFyYXRpb25TdGF0ZW1lbnQKICAgIHwgU2VuZE1lc3NhZ2VTdGF0ZW1lbnQKCiAgRnVuY3Rpb25Cb2R5QmxvY2sgPSAieyIgRnVuY3Rpb25Cb2R5ICJ9IiAgIC8vIG9kZCB0aGF0IHRoaXMgaXNuJ3QgaW4gZXM1Lm9obSBzb21ld2hlcmUKCiAgQWN0b3JTdGF0ZW1lbnQKICAgID0gYWN0b3JTdGFyIChuYW1lZCBFeHByZXNzaW9uPHdpdGhJbj4pPyBGdW5jdGlvbkJvZHlCbG9jayAtLSBub1JlYWN0CiAgICB8IGFjdG9yIChuYW1lZCBFeHByZXNzaW9uPHdpdGhJbj4pPyBGdW5jdGlvbkJvZHlCbG9jayAgICAgLS0gd2l0aFJlYWN0CgogIERhdGFzcGFjZVN0YXRlbWVudAogICAgPSBncm91bmQgZGF0YXNwYWNlIGlkZW50aWZpZXI/IEZ1bmN0aW9uQm9keUJsb2NrIC0tIGdyb3VuZAogICAgfCBkYXRhc3BhY2UgRnVuY3Rpb25Cb2R5QmxvY2sgICAgICAgICAgICAgICAgICAgIC0tIG5vcm1hbAoKICBBY3RvckZhY2V0U3RhdGVtZW50CiAgICA9IHJlYWN0IEZ1bmN0aW9uQm9keUJsb2NrCgogIEFjdG9yRW5kcG9pbnRTdGF0ZW1lbnQKICAgID0gb24gc3RhcnQgRnVuY3Rpb25Cb2R5QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLS0gc3RhcnQKICAgIHwgb24gc3RvcCBGdW5jdGlvbkJvZHlCbG9jayAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLS0gc3RvcAogICAgfCBhc3NlcnQgRmFjZXRQYXR0ZXJuIEFzc2VydFdoZW5DbGF1c2U/ICMoc2MpICAgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBhc3NlcnQKICAgIHwgb24gRmFjZXRFdmVudFBhdHRlcm4gRnVuY3Rpb25Cb2R5QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLS0gZXZlbnQKICAgIHwgb24gZXZlbnQgaWRlbnRpZmllciBGdW5jdGlvbkJvZHlCbG9jayAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLS0gb25FdmVudAogICAgfCBzdG9wIG9uIEZhY2V0VHJhbnNpdGlvbkV2ZW50UGF0dGVybiBGdW5jdGlvbkJvZHlCbG9jayAgICAgICAgICAgICAgICAgICAtLSBzdG9wT25XaXRoQ29udAogICAgfCBzdG9wIG9uIEZhY2V0VHJhbnNpdGlvbkV2ZW50UGF0dGVybiAjKHNjKSAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBzdG9wT25Ob0NvbnQKICAgIHwgZGF0YWZsb3cgRnVuY3Rpb25Cb2R5QmxvY2sgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLS0gZGF0YWZsb3cKICAgIHwgZHVyaW5nIEZhY2V0UGF0dGVybiBGdW5jdGlvbkJvZHlCbG9jayAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgLS0gZHVyaW5nCiAgICB8IGR1cmluZyBGYWNldFBhdHRlcm4gYWN0b3IgKG5hbWVkIEV4cHJlc3Npb248d2l0aEluPik/IEZ1bmN0aW9uQm9keUJsb2NrIC0tIGR1cmluZ0FjdG9yCgogIEFzc2VydFdoZW5DbGF1c2UgPSB3aGVuICIoIiBFeHByZXNzaW9uPHdpdGhJbj4gIikiCgogIEFzc2VydGlvblR5cGVEZWNsYXJhdGlvblN0YXRlbWVudAogICAgPSAoYXNzZXJ0aW9uIHwgbWVzc2FnZSkgdHlwZSBpZGVudGlmaWVyICIoIiBGb3JtYWxQYXJhbWV0ZXJMaXN0ICIpIiAoIj0iIHN0cmluZ0xpdGVyYWwpPyAjKHNjKQoKICBGaWVsZERlY2xhcmF0aW9uU3RhdGVtZW50ID0gZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAoIj0iIEFzc2lnbm1lbnRFeHByZXNzaW9uPHdpdGhJbj4pPyAjKHNjKQogIE1lbWJlckV4cHJlc3Npb24gKz0gZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAtLSBmaWVsZFJlZkV4cAogIFVuYXJ5RXhwcmVzc2lvbiArPSBkZWxldGUgZmllbGQgTWVtYmVyRXhwcmVzc2lvbiAtLSBmaWVsZERlbEV4cAoKICBTZW5kTWVzc2FnZVN0YXRlbWVudCA9ICI6OiIgRXhwcmVzc2lvbjx3aXRoSW4+ICMoc2MpCgogIEZhY2V0RXZlbnRQYXR0ZXJuCiAgICA9IG1lc3NhZ2UgRmFjZXRQYXR0ZXJuICAgLS0gbWVzc2FnZUV2ZW50CiAgICB8IGFzc2VydGVkIEZhY2V0UGF0dGVybiAgLS0gYXNzZXJ0ZWRFdmVudAogICAgfCByZXRyYWN0ZWQgRmFjZXRQYXR0ZXJuIC0tIHJldHJhY3RlZEV2ZW50CgogIEZhY2V0VHJhbnNpdGlvbkV2ZW50UGF0dGVybgogICAgPSBGYWNldEV2ZW50UGF0dGVybiAgICAgICAgICAtLSBmYWNldEV2ZW50CiAgICB8ICIoIiBFeHByZXNzaW9uPHdpdGhJbj4gIikiIC0tIHJpc2luZ0VkZ2UKCiAgRmFjZXRQYXR0ZXJuCiAgICA9IExlZnRIYW5kU2lkZUV4cHJlc3Npb24gbWV0YWxldmVsIGRlY2ltYWxJbnRlZ2VyTGl0ZXJhbCAtLSB3aXRoTWV0YWxldmVsCiAgICB8IExlZnRIYW5kU2lkZUV4cHJlc3Npb24gICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAtLSBub01ldGFsZXZlbAoKICAvLy0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLS0tLQogIC8vIEtleXdvcmRzLiBXZSBkb24ndCBhZGQgdGhlbSB0byB0aGUgImtleXdvcmQiIHByb2R1Y3Rpb24gYmVjYXVzZQogIC8vIHdlIGRvbid0IHdhbnQgdG8gbWFrZSB0aGVtIHVuYXZhaWxhYmxlIHRvIHByb2dyYW1zIGFzCiAgLy8gaWRlbnRpZmllcnMuCgogIGFjdG9yU3RhciA9ICJhY3RvcioiIH5pZGVudGlmaWVyUGFydAogIGFjdG9yID0gImFjdG9yIiB+KCIqIiB8IGlkZW50aWZpZXJQYXJ0KQogIGFzc2VydCA9ICJhc3NlcnQiIH5pZGVudGlmaWVyUGFydAogIGFzc2VydGVkID0gImFzc2VydGVkIiB+aWRlbnRpZmllclBhcnQKICBhc3NlcnRpb24gPSAiYXNzZXJ0aW9uIiB+aWRlbnRpZmllclBhcnQKICBkYXRhZmxvdyA9ICJkYXRhZmxvdyIgfmlkZW50aWZpZXJQYXJ0CiAgZGF0YXNwYWNlID0gImRhdGFzcGFjZSIgfmlkZW50aWZpZXJQYXJ0CiAgZHVyaW5nID0gImR1cmluZyIgfmlkZW50aWZpZXJQYXJ0CiAgZXZlbnQgPSAiZXZlbnQiIH5pZGVudGlmaWVyUGFydAogIGZpZWxkID0gImZpZWxkIiB+aWRlbnRpZmllclBhcnQKICBncm91bmQgPSAiZ3JvdW5kIiB+aWRlbnRpZmllclBhcnQKICBtZXNzYWdlID0gIm1lc3NhZ2UiIH5pZGVudGlmaWVyUGFydAogIG1ldGFsZXZlbCA9ICJtZXRhbGV2ZWwiIH5pZGVudGlmaWVyUGFydAogIG5hbWVkID0gIm5hbWVkIiB+aWRlbnRpZmllclBhcnQKICBvbiA9ICJvbiIgfmlkZW50aWZpZXJQYXJ0CiAgcmVhY3QgPSAicmVhY3QiIH5pZGVudGlmaWVyUGFydAogIHJldHJhY3RlZCA9ICJyZXRyYWN0ZWQiIH5pZGVudGlmaWVyUGFydAogIHN0YXJ0ID0gInN0YXJ0IiB+aWRlbnRpZmllclBhcnQKICBzdG9wID0gInN0b3AiIH5pZGVudGlmaWVyUGFydAogIHR5cGUgPSAidHlwZSIgfmlkZW50aWZpZXJQYXJ0CiAgd2hlbiA9ICJ3aGVuIiB+aWRlbnRpZmllclBhcnQKfQo=","base64").toString();
 var grammar = ohm.grammar(grammarSource, { ES5: ES5.grammar });
 var semantics = grammar.extendSemantics(ES5.semantics);
 
@@ -44,28 +44,29 @@ var forEachChild = (function () {
   return forEachChild;
 })();
 
-function buildActor(nameExpOpt, block) {
+function buildActor(nameExpOpt, block, withReact) {
   var nameExpStr;
   if (nameExpOpt.numChildren === 1) {
     nameExpStr = ', ' + nameExpOpt.asES5;
   } else {
     nameExpStr = '';
   }
-  return 'Syndicate.Actor.spawnActor(function() ' + block.asES5 + nameExpStr + ');';
+  return 'Syndicate.Actor.spawnActor(function() ' +
+    (withReact ? reactWrap(block.asES5) : block.asES5) +
+    nameExpStr + ');';
 }
 
-function buildFacet(facetBlock, transitionBlock) {
-  return '(function () { ' + (facetBlock ? facetBlock.facetVarDecls : '') +
-    '\nSyndicate.Actor.createFacet()' +
-    (facetBlock ? facetBlock.asES5 : '') +
-    (transitionBlock ? transitionBlock.asES5 : '') +
-    '.completeBuild(); }).call(this);';
+function reactWrap(blockCode) {
+  return '{ Syndicate.Actor.Facet.build((function () { ' +
+    blockCode +
+    ' }).bind(this)); }';
 }
 
 function buildOnEvent(isTerminal, eventType, subscription, projection, bindings, body) {
-  return '\n.onEvent(Syndicate.Actor.PRIORITY_NORMAL, ' + isTerminal + ', ' + JSON.stringify(eventType) + ', ' +
+  return 'Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, ' + isTerminal + ', ' +
+    JSON.stringify(eventType) + ', ' +
     subscription + ', ' + projection +
-    ', (function(' + bindings.join(', ') + ') ' + body + '))';
+    ', (function(' + bindings.join(', ') + ') ' + body + '));';
 }
 
 function buildCaseEvent(eventPattern, body) {
@@ -87,8 +88,11 @@ function buildCaseEvent(eventPattern, body) {
 }
 
 var modifiedSourceActions = {
-  ActorStatement: function(_actor, _namedOpt, nameExpOpt, block) {
-    return buildActor(nameExpOpt, block);
+  ActorStatement_noReact: function(_actorStar, _namedOpt, nameExpOpt, block) {
+    return buildActor(nameExpOpt, block, false);
+  },
+  ActorStatement_withReact: function(_actor, _namedOpt, nameExpOpt, block) {
+    return buildActor(nameExpOpt, block, true);
   },
 
   DataspaceStatement_ground: function(_ground, _dataspace, maybeId, block) {
@@ -103,14 +107,8 @@ var modifiedSourceActions = {
     return 'Syndicate.Dataspace.spawn(new Dataspace(function () ' + block.asES5 + '));';
   },
 
-  ActorFacetStatement_state: function(_state, facetBlock, _until, transitionBlock) {
-    return buildFacet(facetBlock, transitionBlock);
-  },
-  ActorFacetStatement_until: function(_react, _until, transitionBlock) {
-    return buildFacet(null, transitionBlock);
-  },
-  ActorFacetStatement_forever: function(_forever, facetBlock) {
-    return buildFacet(facetBlock, null);
+  ActorFacetStatement: function(_react, block) {
+    return '(function () ' + reactWrap(block.asES5) + ').call(this);';
   },
 
   AssertionTypeDeclarationStatement: function(_assertion,
@@ -153,24 +151,17 @@ var modifiedSourceActions = {
     return 'Syndicate.Dataspace.send(' + expr.asES5 + ')' + sc.interval.contents;
   },
 
-  FacetBlock: function(_leftParen, _varStmts, init, situations, done, _rightParen) {
-    return (init ? init.asES5 : '') + situations.asES5.join('') + (done ? done.asES5 : '');
+  ActorEndpointStatement_start: function (_on, _start, block) {
+    return 'Syndicate.Actor.Facet.current.addInitBlock((function() ' + block.asES5 + '));';
   },
-  FacetStateTransitionBlock: function(_leftParen, transitions, _rightParen) {
-    return transitions.asES5.join('');
+  ActorEndpointStatement_stop: function (_on, _stop, block) {
+    return 'Syndicate.Actor.Facet.current.addDoneBlock((function() ' + block.asES5 + '));';
   },
-
-  FacetInitBlock: function(_init, block) {
-    return '\n.addInitBlock((function() ' + block.asES5 + '))';
+  ActorEndpointStatement_assert: function(_assert, expr, whenClause, _sc) {
+    return 'Syndicate.Actor.Facet.current.addAssertion(' +
+      buildSubscription([expr], 'assert', 'pattern', whenClause, null) + ');';
   },
-  FacetDoneBlock: function(_done, block) {
-    return '\n.addDoneBlock((function() ' + block.asES5 + '))';
-  },
-
-  FacetSituation_assert: function(_assert, expr, whenClause, _sc) {
-    return '\n.addAssertion(' + buildSubscription([expr], 'assert', 'pattern', whenClause, null) + ')';
-  },
-  FacetSituation_event: function(_on, eventPattern, block) {
+  ActorEndpointStatement_event: function(_on, eventPattern, block) {
     return buildOnEvent(false,
                         eventPattern.eventType,
                         eventPattern.subscription,
@@ -178,63 +169,59 @@ var modifiedSourceActions = {
                         eventPattern.bindings,
                         block.asES5);
   },
-  FacetSituation_onEvent: function (_on, _event, id, block) {
-    return '\n.addOnEventHandler((function(' + id.asES5 + ') ' + block.asES5 + '))';
+  ActorEndpointStatement_onEvent: function (_on, _event, id, block) {
+    return 'Syndicate.Actor.Facet.current.addOnEventHandler((function(' + id.asES5 + ') ' +
+      block.asES5 + '));';
   },
-  FacetSituation_dataflow: function (_dataflow, block) {
-    return '\n.addDataflow((function () ' + block.asES5 + '))';
+  ActorEndpointStatement_stopOnWithCont: function(_stop, _on, eventPattern, block) {
+    return buildCaseEvent(eventPattern, block.asES5);
   },
-  FacetSituation_during: function(_during, pattern, facetBlock) {
+  ActorEndpointStatement_stopOnNoCont: function(_stop, _on, eventPattern, _sc) {
+    return buildCaseEvent(eventPattern, '{}');
+  },
+  ActorEndpointStatement_dataflow: function (_dataflow, block) {
+    return 'Syndicate.Actor.Facet.current.addDataflow((function () ' + block.asES5 + '));';
+  },
+  ActorEndpointStatement_during: function(_during, pattern, block) {
     var cachedAssertionVar = gensym('cachedAssertion');
     return buildOnEvent(false,
                         'asserted',
                         pattern.subscription,
                         pattern.projection,
                         pattern.bindings,
-                        '{ ' + facetBlock.facetVarDecls +
-                        '\nvar '+cachedAssertionVar+' = '+pattern.instantiatedAssertion+';'+
-                        '\nSyndicate.Actor.createFacet()' +
-                        facetBlock.asES5 +
-                        buildOnEvent(true,
-                                     'retracted',
-                                     pattern.instantiatedSubscription(cachedAssertionVar),
-                                     pattern.instantiatedProjection(cachedAssertionVar),
-                                     [],
-                                     '{}') +
-                        '.completeBuild(); }');
+                        '{\n' +
+                        'var '+cachedAssertionVar+' = '+pattern.instantiatedAssertion+';\n'+
+                        reactWrap(block.asES5 + '\n' +
+                                  buildOnEvent(true,
+                                               'retracted',
+                                               pattern.instantiatedSubscription(cachedAssertionVar),
+                                               pattern.instantiatedProjection(cachedAssertionVar),
+                                               [],
+                                               '{}')) + '}');
   },
-  FacetSituation_duringActor: function(_during, pattern, _actor, _named, nameExpOpt, facetBlock) {
+  ActorEndpointStatement_duringActor: function(_during, pattern, _actor, _named, nameExpOpt, block)
+  {
     var cachedAssertionVar = gensym('cachedAssertion');
     var actorBlock = {
-      asES5: '{ ' + facetBlock.facetVarDecls +
-        '\nSyndicate.Actor.createFacet()' +
-        facetBlock.asES5 +
-        buildOnEvent(true,
-                     'retracted',
-                     pattern.instantiatedSubscription(cachedAssertionVar),
-                     pattern.instantiatedProjection(cachedAssertionVar),
-                     [],
-                     '{}') +
-        '.completeBuild(); }'
+      asES5: reactWrap(block.asES5 + '\n' + 
+                       buildOnEvent(true,
+                                    'retracted',
+                                    pattern.instantiatedSubscription(cachedAssertionVar),
+                                    pattern.instantiatedProjection(cachedAssertionVar),
+                                    [],
+                                    '{}'))
     };
     return buildOnEvent(false,
                         'asserted',
                         pattern.subscription,
                         pattern.projection,
                         pattern.bindings,
-                        '{ var '+cachedAssertionVar+' = '+pattern.instantiatedAssertion+';'+
-                        '\n' + buildActor(nameExpOpt, actorBlock) + ' }');
+                        '{ var '+cachedAssertionVar+' = '+pattern.instantiatedAssertion+';\n'+
+                        buildActor(nameExpOpt, actorBlock, true) + ' }');
   },
 
   AssertWhenClause: function(_when, _lparen, expr, _rparen) {
     return expr.asES5;
-  },
-
-  FacetStateTransition_withContinuation: function(_case, eventPattern, block) {
-    return buildCaseEvent(eventPattern, block.asES5);
-  },
-  FacetStateTransition_noContinuation: function(_case, eventPattern, _sc) {
-    return buildCaseEvent(eventPattern, '{}');
   }
 };
 
@@ -258,11 +245,7 @@ semantics.addAttribute('memberPropExpr', {
   }
 });
 
-semantics.addAttribute('facetVarDecls', {
-  FacetBlock: function (_leftParen, varDecls, _init, _situations, _done, _rightParen) {
-    return varDecls.asES5.join(' ');
-  }
-});
+///////////////////////////////////////////////////////////////////////////
 
 semantics.addAttribute('asSyndicateStructureArguments', {
   FormalParameterList: function(formals) {

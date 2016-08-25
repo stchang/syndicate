@@ -72,16 +72,16 @@ var splitProposal = Syndicate.Struct.makeConstructor("splitProposal", ["title","
 /// core library.
 ///
 function whileRelevantAssert(P) {
-  (function () { 
-Syndicate.Actor.createFacet()
-.addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(P, 0); }))
-.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(P), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(P), metalevel: 0 }; }), (function() {})).completeBuild(); }).call(this);
+  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build((function () { {
+    Syndicate.Actor.Facet.current.addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(P, 0); }));
+    Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(P), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(P), metalevel: 0 }; }), (function() {}));
+  } }).bind(this)); });
 }
 
 /// ### Implementation: SELLER
 
 function seller() {
-  Syndicate.Actor.spawnActor(function() {
+  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build((function () { {
 
 /// We give our actor two state variables: a dictionary recording our
 /// inventory of books (mapping title to price), and a counter
@@ -112,42 +112,37 @@ function seller() {
 /// The seller responds to interest in bookQuotes by asserting a
 /// responsive record, if one exists.
 
-    (function () { 
-Syndicate.Actor.createFacet()
-.onEvent(Syndicate.Actor.PRIORITY_NORMAL, false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(bookQuote(_, _)), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(bookQuote((Syndicate._$("title")), _)), metalevel: 0 }; }), (function(title) { 
-var _cachedAssertion1470624657591_0 = (function() { var _ = Syndicate.__; return Syndicate.observe(bookQuote(title, _)); }).call(this);
-Syndicate.Actor.createFacet()
-.addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(bookQuote(title, this.priceOf(title)), 0); }))
-.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1470624657591_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1470624657591_0, metalevel: 0 }; }), (function() {})).completeBuild(); })).completeBuild(); }).call(this);
+    Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(bookQuote(_, _)), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(bookQuote((Syndicate._$("title")), _)), metalevel: 0 }; }), (function(title) {
+var _cachedAssertion1472127201683_0 = (function() { var _ = Syndicate.__; return Syndicate.observe(bookQuote(title, _)); }).call(this);
+{ Syndicate.Actor.Facet.build((function () { {
+      Syndicate.Actor.Facet.current.addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(bookQuote(title, this.priceOf(title)), 0); }));
+    }
+Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1472127201683_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1472127201683_0, metalevel: 0 }; }), (function() {})); }).bind(this)); }}));
 
 /// It also responds to order requests.
 
-    (function () { 
-Syndicate.Actor.createFacet()
-.onEvent(Syndicate.Actor.PRIORITY_NORMAL, false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(order(_, _, _, _)), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(order((Syndicate._$("title")), (Syndicate._$("offerPrice")), _, _)), metalevel: 0 }; }), (function(title, offerPrice) {
+    Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(order(_, _, _, _)), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(order((Syndicate._$("title")), (Syndicate._$("offerPrice")), _, _)), metalevel: 0 }; }), (function(title, offerPrice) {
 
 /// We cannot sell a book we do not have, and we will not sell for
 /// less than our asking price.
 
-        var askingPrice = this.priceOf(title);
-        if ((askingPrice === false) || (offerPrice < askingPrice)) {
-          whileRelevantAssert(
-            order(title, offerPrice, false, false));
-        } else {
+      var askingPrice = this.priceOf(title);
+      if ((askingPrice === false) || (offerPrice < askingPrice)) {
+        whileRelevantAssert(
+          order(title, offerPrice, false, false));
+      } else {
 
 /// But if we can sell it, we do so by allocating an order ID and
 /// replying to the orderer.
 
-          var orderId = this.nextOrderId++;
-          Syndicate.Actor.deleteField(this.books, title);
+        var orderId = this.nextOrderId++;
+        Syndicate.Actor.deleteField(this.books, title);
 
-          Syndicate.Actor.spawnActor(function() {
-            whileRelevantAssert(
-              order(title, offerPrice, orderId, "March 9th"));
-          });
-        }
-      })).completeBuild(); }).call(this);
-  });
+        whileRelevantAssert(
+          order(title, offerPrice, orderId, "March 9th"));
+      }
+    }));
+  } }).bind(this)); });
 }
 
 /// ### Implementation: SPLIT-PROPOSER and book-quote-requestor
@@ -180,9 +175,8 @@ function buyerA() {
 
 /// First, retrieve a quote for the title, and analyze the result.
 
-      (function () { 
-Syndicate.Actor.createFacet()
-.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(bookQuote(title, _), 0); }), (function() { var _ = Syndicate.__; return { assertion: bookQuote(title, (Syndicate._$("price"))), metalevel: 0 }; }), (function(price) {
+      (function () { Syndicate.Actor.Facet.build((function () { {
+        Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(bookQuote(title, _), 0); }), (function() { var _ = Syndicate.__; return { assertion: bookQuote(title, (Syndicate._$("price"))), metalevel: 0 }; }), (function(price) {
           if (price === false) {
             console.log("A learns that "+title+" is out-of-stock.");
             buyBooks();
@@ -197,7 +191,8 @@ Syndicate.Actor.createFacet()
 
             trySplit(title, price, price / 2);
           }
-        })).completeBuild(); }).call(this);
+        }));
+      } }).bind(this)); }).call(this);
     }
 
     function trySplit(title, price, contribution) {
@@ -216,20 +211,21 @@ Syndicate.Actor.createFacet()
 
 /// Make our proposal, and wait for a response.
 
-        (function () { 
-Syndicate.Actor.createFacet()
-.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(splitProposal(title, price, contribution, true), 0); }), (function() { var _ = Syndicate.__; return { assertion: splitProposal(title, price, contribution, true), metalevel: 0 }; }), (function() {
+        (function () { Syndicate.Actor.Facet.build((function () { {
+          Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(splitProposal(title, price, contribution, true), 0); }), (function() { var _ = Syndicate.__; return { assertion: splitProposal(title, price, contribution, true), metalevel: 0 }; }), (function() {
               console.log("A learns that the split-proposal for "+
                           title+" was accepted");
               buyBooks();
-            }))
-.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(splitProposal(title, price, contribution, false), 0); }), (function() { var _ = Syndicate.__; return { assertion: splitProposal(title, price, contribution, false), metalevel: 0 }; }), (function() {
+            }));
+
+          Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(splitProposal(title, price, contribution, false), 0); }), (function() { var _ = Syndicate.__; return { assertion: splitProposal(title, price, contribution, false), metalevel: 0 }; }), (function() {
               console.log("A learns that the split-proposal for "+
                           title+" was rejected");
               trySplit(title,
                        price,
                        contribution + ((price - contribution) / 2));
-            })).completeBuild(); }).call(this);
+            }));
+        } }).bind(this)); }).call(this);
       }
     }
   });
@@ -238,7 +234,7 @@ Syndicate.Actor.createFacet()
 /// ### Implementation: SPLIT-DISPOSER and BUYER
 
 function buyerB() {
-  Syndicate.Actor.spawnActor(function() {
+  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build((function () { {
 
 /// This actor maintains a record of the amount of money it has left
 /// to spend.
@@ -248,52 +244,55 @@ function buyerB() {
 /// It spends its time waiting for a SPLIT-PROPOSER to offer a
 /// `splitProposal`.
 
-    (function () { 
-Syndicate.Actor.createFacet()
-.onEvent(Syndicate.Actor.PRIORITY_NORMAL, false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(splitProposal(_,
-                                        _,
-                                        _,
-                                        _)), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(splitProposal((Syndicate._$("title")),
-                                        (Syndicate._$("price")),
-                                        (Syndicate._$("theirContribution")),
-                                        _)), metalevel: 0 }; }), (function(title, price, theirContribution) {
-        var myContribution = price - theirContribution;
-        console.log("B is being asked to contribute "+myContribution+
-                    " toward "+title+" at price "+price);
+    Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(splitProposal(_,
+                                      _,
+                                      _,
+                                      _)), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(splitProposal((Syndicate._$("title")),
+                                      (Syndicate._$("price")),
+                                      (Syndicate._$("theirContribution")),
+                                      _)), metalevel: 0 }; }), (function(title, price, theirContribution) {
+      var myContribution = price - theirContribution;
+      console.log("B is being asked to contribute "+myContribution+
+                  " toward "+title+" at price "+price);
 
 /// We may not be able to afford contributing this much.
 
-        if (myContribution > this.funds) {
-          console.log("B hasn't enough funds ("+this.funds+
-                      " remaining)");
-          whileRelevantAssert(
-            splitProposal(title, price, theirContribution, false));
-        } else {
+      if (myContribution > this.funds) {
+        console.log("B hasn't enough funds ("+this.funds+
+                    " remaining)");
+        whileRelevantAssert(
+          splitProposal(title, price, theirContribution, false));
+      } else {
 
 /// But if we *can* afford it, update our remaining funds and spawn a
 /// small actor to handle the actual purchase now that we have agreed
 /// on a split.
 
-          var remainingFunds = this.funds - myContribution;
-          console.log("B accepts the offer, leaving them with "+
-                      remainingFunds+" remaining funds");
-          this.funds = remainingFunds;
+        var remainingFunds = this.funds - myContribution;
+        console.log("B accepts the offer, leaving them with "+
+                    remainingFunds+" remaining funds");
+        this.funds = remainingFunds;
 
-          Syndicate.Actor.spawnActor(function() {
-            (function () { 
-Syndicate.Actor.createFacet()
-.addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(splitProposal(title,
-                                   price,
-                                   theirContribution,
-                                   true), 0); }))
-.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(order(title, price, _, _), 0); }), (function() { var _ = Syndicate.__; return { assertion: order(title, price, (Syndicate._$("id")), (Syndicate._$("date"))), metalevel: 0 }; }), (function(id, date) {
-                console.log("The order for "+title+" has id "+id+
-                            ", and will be delivered on "+date);
-              })).completeBuild(); }).call(this);
-          });
-        }
-      })).completeBuild(); }).call(this);
-  });
+        Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build((function () { {
+
+/// While waiting for order confirmation, take the opportunity to
+/// signal to our SPLIT-PROPOSER that we accepted their proposal.
+
+          Syndicate.Actor.Facet.current.addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(splitProposal(title,
+                               price,
+                               theirContribution,
+                               true), 0); }));
+
+/// When order confirmation arrives, this purchase is completed.
+
+          Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(order(title, price, _, _), 0); }), (function() { var _ = Syndicate.__; return { assertion: order(title, price, (Syndicate._$("id")), (Syndicate._$("date"))), metalevel: 0 }; }), (function(id, date) {
+              console.log("The order for "+title+" has id "+id+
+                          ", and will be delivered on "+date);
+            }));
+        } }).bind(this)); });
+      }
+    }));
+  } }).bind(this)); });
 }
 
 /// ### Starting Configuration
