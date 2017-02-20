@@ -72,16 +72,16 @@ var splitProposal = Syndicate.Struct.makeConstructor("splitProposal", ["title","
 /// core library.
 ///
 function whileRelevantAssert(P) {
-  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build((function () { {
+  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build(function () { {
     Syndicate.Actor.Facet.current.addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(P, 0); }));
     Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(P), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(P), metalevel: 0 }; }), (function() {}));
-  } }).bind(this)); });
+  } }); });
 }
 
 /// ### Implementation: SELLER
 
 function seller() {
-  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build((function () { {
+  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build(function () { {
 
 /// We give our actor two state variables: a dictionary recording our
 /// inventory of books (mapping title to price), and a counter
@@ -113,11 +113,11 @@ function seller() {
 /// responsive record, if one exists.
 
     Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(bookQuote(_, _)), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(bookQuote((Syndicate._$("title")), _)), metalevel: 0 }; }), (function(title) {
-var _cachedAssertion1472127201683_0 = (function() { var _ = Syndicate.__; return Syndicate.observe(bookQuote(title, _)); }).call(this);
-{ Syndicate.Actor.Facet.build((function () { {
+var _cachedAssertion1487628705850_0 = (function() { var _ = Syndicate.__; return Syndicate.observe(bookQuote(title, _)); }).call(this);
+{ Syndicate.Actor.Facet.build(function () { {
       Syndicate.Actor.Facet.current.addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(bookQuote(title, this.priceOf(title)), 0); }));
     }
-Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1472127201683_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1472127201683_0, metalevel: 0 }; }), (function() {})); }).bind(this)); }}));
+Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1487628705850_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1487628705850_0, metalevel: 0 }; }), (function() {})); }); }}));
 
 /// It also responds to order requests.
 
@@ -142,7 +142,7 @@ Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "re
           order(title, offerPrice, orderId, "March 9th"));
       }
     }));
-  } }).bind(this)); });
+  } }); });
 }
 
 /// ### Implementation: SPLIT-PROPOSER and book-quote-requestor
@@ -175,7 +175,7 @@ function buyerA() {
 
 /// First, retrieve a quote for the title, and analyze the result.
 
-      (function () { Syndicate.Actor.Facet.build((function () { {
+      (function () { Syndicate.Actor.Facet.build(function () { {
         Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(bookQuote(title, _), 0); }), (function() { var _ = Syndicate.__; return { assertion: bookQuote(title, (Syndicate._$("price"))), metalevel: 0 }; }), (function(price) {
           if (price === false) {
             console.log("A learns that "+title+" is out-of-stock.");
@@ -192,7 +192,7 @@ function buyerA() {
             trySplit(title, price, price / 2);
           }
         }));
-      } }).bind(this)); }).call(this);
+      } }); }).call(this);
     }
 
     function trySplit(title, price, contribution) {
@@ -211,7 +211,7 @@ function buyerA() {
 
 /// Make our proposal, and wait for a response.
 
-        (function () { Syndicate.Actor.Facet.build((function () { {
+        (function () { Syndicate.Actor.Facet.build(function () { {
           Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(splitProposal(title, price, contribution, true), 0); }), (function() { var _ = Syndicate.__; return { assertion: splitProposal(title, price, contribution, true), metalevel: 0 }; }), (function() {
               console.log("A learns that the split-proposal for "+
                           title+" was accepted");
@@ -225,7 +225,7 @@ function buyerA() {
                        price,
                        contribution + ((price - contribution) / 2));
             }));
-        } }).bind(this)); }).call(this);
+        } }); }).call(this);
       }
     }
   });
@@ -234,7 +234,7 @@ function buyerA() {
 /// ### Implementation: SPLIT-DISPOSER and BUYER
 
 function buyerB() {
-  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build((function () { {
+  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build(function () { {
 
 /// This actor maintains a record of the amount of money it has left
 /// to spend.
@@ -273,7 +273,7 @@ function buyerB() {
                     remainingFunds+" remaining funds");
         this.funds = remainingFunds;
 
-        Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build((function () { {
+        Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build(function () { {
 
 /// While waiting for order confirmation, take the opportunity to
 /// signal to our SPLIT-PROPOSER that we accepted their proposal.
@@ -289,10 +289,10 @@ function buyerB() {
               console.log("The order for "+title+" has id "+id+
                           ", and will be delivered on "+date);
             }));
-        } }).bind(this)); });
+        } }); });
       }
     }));
-  } }).bind(this)); });
+  } }); });
 }
 
 /// ### Starting Configuration

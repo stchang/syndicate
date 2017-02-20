@@ -11,7 +11,7 @@ var G = new Syndicate.Ground(function () {
   Syndicate.Timer.spawnTimerDriver();
   Syndicate.Broker.spawnBrokerClientDriver();
 
-  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build((function () { {
+  Syndicate.Actor.spawnActor(function() { Syndicate.Actor.Facet.build(function () { {
     var id = Syndicate.RandomID.randomId(4, true);
 
     var email_element = document.getElementById('my_email');
@@ -91,8 +91,8 @@ var G = new Syndicate.Ground(function () {
     }));
 
     Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(fromBroker(this.wsurl, locationRecord(_, _, _, _, _)), 0); }), (function() { var _ = Syndicate.__; return { assertion: fromBroker(this.wsurl, locationRecord((Syndicate._$("id")), (Syndicate._$("email")), _, _, _)), metalevel: 0 }; }), (function(id, email) {
-var _cachedAssertion1472127196930_0 = (function() { var _ = Syndicate.__; return fromBroker(this.wsurl, locationRecord(id, email, _, _, _)); }).call(this);
-{ Syndicate.Actor.Facet.build((function () { {
+var _cachedAssertion1487628703784_0 = (function() { var _ = Syndicate.__; return fromBroker(this.wsurl, locationRecord(id, email, _, _, _)); }).call(this);
+{ Syndicate.Actor.Facet.build(function () { {
       var ui = new Syndicate.UI.Anchor();
       var marker = new google.maps.Marker({
         map: map,
@@ -145,6 +145,6 @@ var _cachedAssertion1472127196930_0 = (function() { var _ = Syndicate.__; return
         if (selectedMarker === marker) selectedMarker = null;
       }));
     }
-Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1472127196930_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1472127196930_0, metalevel: 0 }; }), (function() {})); }).bind(this)); }}));
-  } }).bind(this)); });
+Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1487628703784_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1487628703784_0, metalevel: 0 }; }), (function() {})); }); }}));
+  } }); });
 }).startStepping();

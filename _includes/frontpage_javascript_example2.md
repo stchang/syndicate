@@ -1,5 +1,5 @@
 ```javascript
-actor {
+spawn {
   on asserted account($balance) {
     console.log("Balance:",
                 balance);
