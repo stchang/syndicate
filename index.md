@@ -41,7 +41,7 @@ link:
 
 ## Overview
 
-Syndicate is an Actor-based language offering
+Syndicate is an Actor-based programming language offering
 
  - pub/sub pattern-based message routing, for mapping events to actors
 
