@@ -113,11 +113,11 @@ function seller() {
 /// responsive record, if one exists.
 
     Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, false, "asserted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(Syndicate.observe(bookQuote(_, _)), 0); }), (function() { var _ = Syndicate.__; return { assertion: Syndicate.observe(bookQuote((Syndicate._$("title")), _)), metalevel: 0 }; }), (function(title) {
-var _cachedAssertion1487628705850_0 = (function() { var _ = Syndicate.__; return Syndicate.observe(bookQuote(title, _)); }).call(this);
+var _cachedAssertion1505589937975_0 = (function() { var _ = Syndicate.__; return Syndicate.observe(bookQuote(title, _)); }).call(this);
 { Syndicate.Actor.Facet.build(function () { {
       Syndicate.Actor.Facet.current.addAssertion((function() { var _ = Syndicate.__; return Syndicate.Patch.assert(bookQuote(title, this.priceOf(title)), 0); }));
     }
-Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1487628705850_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1487628705850_0, metalevel: 0 }; }), (function() {})); }); }}));
+Syndicate.Actor.Facet.current.onEvent(Syndicate.Actor.PRIORITY_NORMAL, true, "retracted", (function() { var _ = Syndicate.__; return Syndicate.Patch.sub(_cachedAssertion1505589937975_0, 0); }), (function() { var _ = Syndicate.__; return { assertion: _cachedAssertion1505589937975_0, metalevel: 0 }; }), (function() {})); }); }}));
 
 /// It also responds to order requests.
 
