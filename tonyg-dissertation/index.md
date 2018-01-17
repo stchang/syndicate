@@ -25,13 +25,13 @@ talk, and the [proof scripts](#proofs) accompanying the dissertation.
 ### Dissertation defense talk recording
 
 I defended my thesis on the 8th of December, 2017. The talk was
-recorded. There is a copy on
-[YouTube](https://www.youtube.com/watch?v=w8jgUFWVD5s) (also embedded
-below), and another at the
-[Internet Archive](https://archive.org/details/TonyGarnockJonesDoctoralDissertationDefense8Dec2017).
-(The sound is *very* quiet on the recording.)
+recorded. There is a copy on the
+[Internet Archive](https://archive.org/details/TonyGarnockJonesDoctoralDissertationDefense8Dec2017)
+(embedded below) and another at
+[YouTube](https://www.youtube.com/watch?v=w8jgUFWVD5s). (The sound is
+*very* quiet on the recording.)
 
-<p class="center"><iframe src="https://www.youtube.com/embed/w8jgUFWVD5s" width="640" height="480" frameborder="0" webkitallowfullscreen="true" mozallowfullscreen="true" allowfullscreen></iframe></p>
+<p class="center"><iframe src="https://archive.org/embed/TonyGarnockJonesDoctoralDissertationDefense8Dec2017" width="640" height="480" frameborder="0" webkitallowfullscreen="true" mozallowfullscreen="true" allowfullscreen></iframe></p>
 
 ### Dissertation defense slides
 
