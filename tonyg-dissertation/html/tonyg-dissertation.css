@@ -1,0 +1,589 @@
+@import 'fonts/texgyrepagella.css';
+@import 'wikihtml.css';
+
+body {
+    line-height: 2rem;
+    font-size: 1.4rem;
+    font-family: "TeXGyrePagella", "Palatino", "Palatino Linotype", "Palatino LT STD", serif;
+    margin: 0 5vw;
+    width: 90vw;
+    max-width: 42rem;
+    min-width: 0rem;
+    counter-reset: sidenote-counter;
+}
+
+.error { background: red; color: white; }
+
+.language-name { font-variant: small-caps; font-style: normal; }
+
+.small-caps { font-variant: small-caps; }
+
+a:link.auto-anchor {
+    position: relative;
+    display: block;
+    vertical-align: top;
+    text-decoration: none;
+    background: none;
+    font-size: 1.4rem;
+}
+.auto-anchor-inner {
+    position: absolute;
+    left: -2em;
+    /* right: 100%; */
+    width: 2.2em;
+}
+li .auto-anchor-inner {
+    left: -3.4em;
+}
+.auto-anchor-anchor {
+    color: #aaa;
+    position: relative;
+    left: 1em;
+}
+:hover.auto-anchor-anchor {
+    color: black;
+}
+
+a.label-anchor {
+    float: left;
+    width: 0;
+    font-size: 1.4rem;
+    font-style: normal;
+    font-weight: normal;
+}
+a.label-anchor:after {
+    color: #aaa;
+    content: "⚓";
+}
+a:hover.label-anchor:after {
+    color: black;
+}
+
+a.label-anchor {
+    margin-left: -1.4rem;
+}
+li a.label-anchor {
+    margin-left: -2.8rem;
+}
+figcaption a.label-anchor {
+    margin-left: -9.8rem;
+}
+figure.marginfigure figcaption a.label-anchor {
+    margin-left: -1.4rem;
+}
+figure.fullwidth figcaption a.label-anchor {
+    margin-left: -1.4rem;
+}
+
+b { font-weight: bold; }
+i { font-style: italic; }
+em { font-style: italic; }
+
+.MJXc-font-inherit {
+    width: 100% !important;
+}
+
+.MJXc-sans-serif-font {
+    font-family: sans;
+    font-size: 85% !important;
+    width: 100% !important;
+}
+.sans-serif {
+    background: red;
+    font-family: sans;
+}
+
+.MJXc-monospace-font {
+    font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    font-size: 85% !important;
+}
+pre, code, tt {
+    font-family: Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+pre {
+    line-height: 1.6;
+}
+
+div.verbatim {
+    margin: 1.4rem 0;
+    text-align: center;
+}
+div.verbatim pre.verbatim {
+    display: inline-block;
+    text-align: left;
+}
+table div.verbatim {
+    /* Specifically for figure 52 */
+    text-align: left;
+}
+
+.mathjax-definitions { display: none; }
+.mathjax-inline { white-space: nowrap; }
+
+.alignment-left, .align-left { text-align: left; }
+.alignment-right, .align-right { text-align: right; }
+.alignment-center, .align-center { text-align: center; margin-left: auto; margin-right: auto; }
+.valignment-top { vertical-align: top; }
+
+.thesisstatement {
+    border: solid black 1pt;
+    margin: 0 -1em;
+    padding: 1em;
+}
+
+dt { font-variant: small-caps; }
+dd { margin-left: 2rem; margin-bottom: 1rem; }
+
+ol ol { list-style-type: lower-alpha; }
+
+a:link, a:visited { color: #176fc1; text-decoration: none; }
+a.citation { color: #008000; }
+a.citation .parens { color: black; }
+
+div.bibliography-entry {
+    margin: 1.4rem 0;
+    width: 74.5rem;
+    max-width: 90vw;
+}
+div.bibliography-entry > div {
+    padding-left: 1em;
+    text-indent: -1em;
+}
+
+div.bibliography-entry .bibfield:after { content: ". "; }
+div.bibliography-entry .bibfield.dotted:after { content: " "; }
+div.bibliography-entry .no-author .editor:after { content: ", eds. "; }
+div.bibliography-entry .no-author.editor-count-1 .editor:after { content: ", ed. "; }
+div.bibliography-entry .no-number .pages:before { content: "pp. "; }
+div.bibliography-entry .has-location.has-publisher .location:after { content: ": "; }
+
+div.bibliography-entry .date { display: none; }
+div.bibliography-entry .has-dayofmonth .date { display: inline; }
+
+div.bibliography-entry .anchors:after { content: " "; }
+div.bibliography-entry .doi { font-variant: small-caps; color: #008000; }
+div.bibliography-entry .bibfield.doi:after { content: " "; }
+div.bibliography-entry .url { font-variant: small-caps; }
+div.bibliography-entry .bibfield.url:after { content: none; }
+
+div.bibliography-entry .entrytype-misc .title:before { content: "“"; }
+div.bibliography-entry .entrytype-misc .title:after { content: ".” "; }
+div.bibliography-entry .entrytype-misc .number { display: none; }
+div.bibliography-entry .entrytype-manual .title { font-style: italic; }
+div.bibliography-entry .entrytype-book .title { font-style: italic; }
+div.bibliography-entry .entrytype-book .edition:after { content: " ed. "; }
+div.bibliography-entry .entrytype-book .pages { display: none; }
+div.bibliography-entry .entrytype-report .type-techreport:after { content: "Technical report. "; }
+div.bibliography-entry .entrytype-report.has-number .type-techreport:after { content: none; }
+div.bibliography-entry .entrytype-report.has-number .number:before { content: "Technical report "; }
+div.bibliography-entry .entrytype-incollection .booktitle:before { content: "In "; font-style: normal; }
+div.bibliography-entry .entrytype-incollection.has-editor .booktitle:after { content: ", eds. "; font-style: normal; }
+div.bibliography-entry .entrytype-incollection.has-editor.editor-count-1 .booktitle:after { content: ", ed. "; font-style: normal; }
+div.bibliography-entry .entrytype-incollection .organization { display: none; }
+div.bibliography-entry .entrytype-incollection .booktitle { font-style: italic; }
+/* div.bibliography-entry .entrytype-inproceedings .booktitle:before { content: "In "; font-style: normal; } */
+div.bibliography-entry .entrytype-inproceedings.has-editor .booktitle:after { content: ", eds. "; font-style: normal; }
+div.bibliography-entry .entrytype-inproceedings.has-editor.editor-count-1 .booktitle:after { content: ", ed. "; font-style: normal; }
+ /* TODO: ed. vs eds. ; "... ed. Peter Sestoft", see Cooper and Krishnamurthi 2006 entry */
+div.bibliography-entry .entrytype-inproceedings .organization { display: none; }
+div.bibliography-entry .entrytype-inproceedings .publisher { display: none; }
+div.bibliography-entry .entrytype-inproceedings.has-location.has-publisher .location:after { content: ". "; }
+div.bibliography-entry .entrytype-inproceedings .booktitle { font-style: italic; }
+div.bibliography-entry .entrytype-article .title:before { content: "“"; }
+div.bibliography-entry .entrytype-article .title:after { content: ".” "; }
+div.bibliography-entry .entrytype-article .journaltitle { font-style: italic; }
+div.bibliography-entry .entrytype-article .journaltitle:after { content: " "; }
+div.bibliography-entry .entrytype-article .publisher { display: none; }
+div.bibliography-entry .entrytype-article.has-number .volume:after { content: none; }
+div.bibliography-entry .entrytype-article .number:before { content: "("; }
+div.bibliography-entry .entrytype-article .number:after { content: ")"; }
+div.bibliography-entry .entrytype-article.no-pages .number:after { content: ") "; }
+div.bibliography-entry .entrytype-article.has-number .pages:before { content: ":"; }
+div.bibliography-entry .entrytype-article .issue:before { content: "Issue "; }
+div.bibliography-entry .entrytype-thesis .type-PhD:after { content: "PhD thesis. "; }
+div.bibliography-entry .entrytype-thesis .number { display: none; }
+
+div.toc { width: 74.5rem; max-width: 90vw; }
+div.toc ul.toc { list-style-type: none !important; }
+div.toc ul.toc li { margin-left: 0; padding: 0; }
+div.toc span.toc-counter:before { content: none; }
+div.toc span.toc-counter { display: inline-block; }
+div.toc span.toc-counter.part { width: 2.7rem; margin-top: 1em; }
+div.toc span.toc-counter.chapter { width: 2rem; }
+div.toc span.toc-counter.appendix { width: 2rem; }
+div.toc span.toc-counter.section { width: 3rem; padding-left: 2rem; }
+div.toc span.toc-counter.subsection { width: 4rem; padding-left: 5rem; }
+div.toc li.part { font-variant: all-small-caps; color: #ae2230; }
+div.toc li.chapter { font-variant: all-small-caps; }
+div.toc li.appendix { font-variant: all-small-caps; }
+div.toc a:link, div.toc a:visited { color: inherit; }
+
+div.toc span.heading-text {
+    display: inline-block;
+    vertical-align: top;
+    max-width: 74.5rem;
+    width: 90vw;
+}
+div.toc span.heading-text.part { max-width: calc(74.5rem - 2.7rem); width: calc(90vw - 2.7rem); margin-top: 1em; }
+div.toc span.heading-text.chapter { max-width: calc(74.5rem - 2rem); width: calc(90vw - 2rem); }
+div.toc span.heading-text.appendix { max-width: calc(74.5rem - 2rem); width: calc(90vw - 2rem); }
+div.toc span.heading-text.section { max-width: calc(74.5rem - 5rem); width: calc(90vw - 5rem); }
+div.toc span.heading-text.subsection { max-width: calc(74.5rem - 9rem); width: calc(90vw - 9rem); }
+
+span.counter.part:before { content: "Part "; }
+span.counter.chapter:before { content: "Chapter "; }
+span.counter.appendix:before { content: "Appendix "; }
+span.counter.figure:before { content: "Figure "; }
+figure figure span.counter.figure:before { content: none; }
+
+span.counter.example:before { content: "Example "; }
+span.counter.theorem:before { content: "Theorem "; }
+span.counter.conjecture:before { content: "Conjecture "; }
+span.counter.proof:before { content: "Proof"; }
+div.named span.counter.proof:before { content: none; }
+span.counter.definition:before { content: "Definition "; }
+span.counter.lemma:before { content: "Lemma "; }
+span.counter.proposition:before { content: "Proposition "; }
+span.counter.claim:before { content: "Claim "; }
+span.counter.remark:before { content: "Remark "; }
+span.counter.remark.unnumbered:before { content: "Remark"; }
+
+div.protocol-description {
+    background: #eee;
+    border-top: solid black 1pt;
+    border-bottom: solid black 2pt;
+    padding: 0 0.36rem;
+}
+span.counter.protocol-description:before { content: "Protocol "; }
+div.theorem-like span.counter.protocol-description { font-weight: bold; }
+div.theorem-like.protocol-description div.protocol-section { margin-top: 1.4rem; }
+div.theorem-like.protocol-description div.protocol-section span.lyx-argument { font-style: italic; }
+div.theorem-like.protocol-description div.protocol-section span.lyx-argument:before { content: none; }
+div.theorem-like.protocol-description div.protocol-section span.lyx-argument:after { content: ". "; }
+
+div.theorem-like span.counter { font-style: normal; }
+div.theorem-like span.counter.example { font-weight: bold; }
+div.theorem-like span.counter.theorem { font-weight: bold; }
+div.theorem-like span.counter.conjecture { font-weight: bold; }
+div.theorem-like span.counter.proof { font-style: italic; }
+div.theorem-like span.counter.definition { font-weight: bold; }
+div.theorem-like span.counter.lemma { font-weight: bold; }
+div.theorem-like span.counter.proposition { font-weight: bold; }
+div.theorem-like span.counter.claim { font-style: italic; }
+div.theorem-like span.counter.remark { font-style: italic; }
+
+div.theorem-like span.counter.remark span { font-style: normal; }
+div.theorem-like span.counter.unnumbered span { display: none; }
+
+span.counter:after { content: ". "; }
+div.theorem-like.named span.counter:after { content: none; }
+div.theorem-like div.footnote span.counter:after { content: ". "; }
+
+div.theorem-like:after {
+    clear: both;
+}
+
+div.theorem-like span.lyx-argument:before { content: " ("; }
+div.theorem-like span.lyx-argument:after { content: "). "; }
+
+div.theorem-like.theorem { font-style: italic; }
+div.theorem-like.conjecture { font-style: italic; }
+div.theorem-like.lemma { font-style: italic; }
+div.theorem-like.proposition { font-style: italic; }
+
+div.theorem-like.theorem em,
+div.theorem-like.conjecture em,
+div.theorem-like.lemma em,
+div.theorem-like.proposition em {
+    font-style: normal;
+}
+
+div.theorem-like span.lyx-argument { font-style: normal; }
+
+div.theorem-like.proof span.lyx-argument { font-style: italic; }
+div.theorem-like.proof span.lyx-argument:before { content: none; }
+div.theorem-like.proof span.lyx-argument:after { content: ". "; }
+
+div.theorem-like {
+    position: relative;
+}
+div.theorem-like span.halmos {
+    clear: both;
+    position: absolute;
+    bottom: 0;
+    right: -2rem;
+}
+div.theorem-like.example span.halmos:after {
+    content: "♢";
+}
+
+div.theorem-like.proof span.halmos:after {
+    content: "□";
+}
+
+.footnote-number {
+    position: relative;
+    font-size: 1rem;
+    top: -0.5rem;
+    left: 0.1rem;
+}
+
+.footnote {
+    float: right;
+    clear: right;
+
+    text-align: left;
+    position: relative;
+    font-size: 1.1rem;
+    margin-top: 0.5em;
+    margin-bottom: 0.5em;
+    padding: 0;
+}
+
+.footnote blockquote, blockquote {
+    margin: 1rem 2rem;
+}
+
+blockquote .footnote {
+    position: relative;
+    left: 2.2rem;
+}
+
+.footnote {
+    line-height: 1.3rem;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    clear: both;
+    width: 90vw;
+    font-weight: 400;
+    font-style: italic;
+    line-height: 1;
+}
+
+h1 { margin-top: 5.2rem; font-size: 4.2rem; color: #ae2230; }
+div.author {
+    font-variant: all-small-caps;
+    margin-top: 1.0rem;
+    font-size: 1.7rem;
+}
+div.author:before {
+    font-variant: normal;
+    font-style: italic;
+    content: "by ";
+}
+
+h2 { margin-top: 4.2rem; font-size: 3.2rem; color: #ae2230; }
+/* h2:before { */
+/*     display: block; */
+/*     content: ' '; */
+/*     width: 90vw; height: 0pt; border-top: solid #ae2230 2pt; */
+/*     padding-top: 0.5em; */
+/* } */
+h3 { margin-top: 3.2rem; font-size: 2.2rem; }
+/* h3:after { */
+/*     display: block; */
+/*     content: ' '; */
+/*     width: 90vw; */
+/*     max-width: 74.5rem; */
+/*     min-width: 0rem; */
+/*     height: 0pt; border-bottom: solid black 1pt; */
+/*     padding-bottom: 0.5em; */
+/* } */
+h4 { margin-top: 2.0rem; font-size: 1.7rem; }
+h5 { margin-top: 2.0rem; font-size: 1.5rem; }
+h6 { font-size: 1.4rem; font-weight: normal; font-style: normal; font-variant: small-caps; margin-top: 1em; }
+
+p {
+    margin: 1.4rem 0;
+}
+
+hr {
+    border-top: solid black 1pt;
+    margin: 1.4rem 0;
+}
+
+ul { list-style-type: disc; }
+ol { list-style-type: decimal; }
+
+li {
+    margin-left: 3em;
+    padding: 0.5em 0;
+}
+
+ol.custom-label {
+    list-style-type: none;
+}
+
+li > span.custom-label {
+    display: inline-block;
+    margin-right: 0.36em;
+    margin-left: -1em;
+}
+
+.fullwidth, .screenwidth {
+    margin-left: 0;
+    margin-right: 0;
+    width: 90vw;
+    clear: both;
+}
+
+.fullwidth {
+    max-width: 74.5rem;
+}
+
+figure {
+    clear: both;
+    border-top: solid black 2pt;
+    border-bottom: solid black 2pt;
+    padding: 0;
+    margin: 2rem 0;
+}
+figure figure {
+    border: none;
+}
+figure figure figcaption {
+    border: none;
+}
+
+figure.marginfigure {
+    border: none;
+    float: right;
+}
+
+figcaption {
+    font-size: 1.1rem;
+    padding: 0;
+    border-top: solid black 0.5pt;
+    /* border-bottom: solid black 1pt; */
+    line-height: 1.6rem;
+}
+figcaption .lyx-argument { display: none; }
+figcaption .figcaption-text {
+    display: inline-block;
+    width: 33.6rem;
+    vertical-align: top;
+    text-align: left;
+}
+figcaption span.counter {
+    display: inline-block;
+    width: 8.04rem;
+    text-align: right;
+    padding-right: 0.36rem;
+}
+figcaption span.counter:after { content: ": "; }
+figure figure figcaption span.counter:after { content: none; }
+
+figure.marginfigure figcaption span.counter { display: inline; }
+figure.marginfigure figcaption .figcaption-text { display: inline; }
+
+figure.fullwidth figcaption {
+    float: right;
+    border: none;
+    margin-top: 0.36rem;
+    margin-bottom: 0.5em;
+}
+figure.fullwidth figcaption span.counter { display: inline; }
+figure.fullwidth figcaption .figcaption-text { display: inline; }
+
+img {
+    width: 100%;
+    max-width: 100%;
+}
+
+.frameless-box {
+    text-align: left;
+}
+.boxed-box {
+    border: solid black 1pt;
+    margin: 0.18em 0;
+}
+
+.implies-raisebox-hack {
+    display: inline-block;
+    line-height: 2in;
+    vertical-align: bottom;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+td {
+    padding: 0.36em;
+    margin: 0;
+    white-space: nowrap;
+}
+td.leftline-true { border-left: solid black 0.5pt; }
+td.rightline-true { border-right: solid black 0.5pt; }
+td.topline-true { border-top: solid black 0.5pt; }
+td.bottomline-true { border-bottom: solid black 0.5pt; }
+td.special-45-percent-textwidth { min-width: 33.525rem; max-width: 33.525rem; white-space: inherit; }
+td.special-50-percent-textwidth { min-width: 37.25rem; max-width: 37.25rem; white-space: inherit; }
+td p {
+    margin: 0;
+}
+
+table .frameless-box .plain-layout-boundary {
+    display: block;
+    white-space: normal;
+}
+
+/*---------------------------------------------------------------------------*/
+/* Responsiveness: adapt font size to different resolutions */
+
+@media screen and (max-width: 767px) {
+    html { font-size: 66%; }
+}
+/*---------------------------------------------------------------------------*/
+/* Responsiveness: adapt page layout to different widths */
+
+figure.fullwidth figcaption, .marginfigure, .footnote {
+    width: calc(90vw - 43rem);
+    margin-left: 1rem;
+}
+.marginfigure, .footnote {
+    margin-right: calc(42rem - 90vw);
+}
+
+@media screen and (max-width: 71.11rem) {
+    figure.fullwidth figcaption, .marginfigure, .footnote {
+        width: 21rem;
+    }
+    .marginfigure, .footnote {
+        margin-right: calc(42rem - 90vw);
+    }
+
+    /* Once we start encroaching on the right margin of the main block, it
+       looks funny overlapping the grey of a protocol description
+       block, so just shuffle the item inside at that point. */
+    div.protocol-description figure.fullwidth figcaption,
+    div.protocol-description .marginfigure,
+    div.protocol-description .footnote {
+        width: 45vw;
+        max-width: 21rem;
+        margin-right: 0;
+    }
+}
+
+@media screen and (max-width: 46.67rem) {
+    figcaption span.counter { display: inline; }
+    figcaption .figcaption-text { display: inline; }
+    figure.fullwidth figcaption, .marginfigure, .footnote {
+        width: 45vw;
+        max-width: 21rem;
+        margin-right: 0;
+    }
+}
+
+@media screen and (min-width: 82.777rem) {
+    figure.fullwidth figcaption, .marginfigure, .footnote {
+        width: 31.5rem;
+    }
+    .marginfigure, .footnote {
+        margin-right: -32.5rem;
+    }
+}

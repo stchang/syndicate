@@ -4,7 +4,7 @@ layout: page
 class: frontpage
 link:
   ghrepo: 'https://github.com/tonyg/syndicate'
-  docs: 'http://docs.racket-lang.org/syndicate/index.html'
+  docs: 'http://docs.racket-lang.org/syndicate@syndicate/index.html'
 ---
 
 **noun**  
@@ -111,8 +111,28 @@ implementations along with some larger example programs.
 ## Documentation
 
 The system is still somewhat in flux, and documentation is still being
-written. A draft of the documentation for the Racket implementation of
-Syndicate is available [here]({{ page.link.docs }}).
+written. My [dissertation](tonyg-dissertation/) has a chapter
+describing the Racket implementation of Syndicate and a chapter
+including many examples demonstrating idioms of Syndicate programming.
+
+<!-- A draft of the documentation for the Racket implementation of -->
+<!-- Syndicate is available [here]({{ page.link.docs }}). -->
+
+## Dissertation
+
+A [resource page](tonyg-dissertation/) is available, including links
+to the PDF and HTML versions of the dissertation document, a recording
+of my defense talk, and the corresponding slides.
+
+<a href="{{ site.baseurl }}/papers/conversational-concurrency-201712310922.pdf"><img class="leftfloat" src="{{ site.baseurl }}/img/pdf_icon_gen_48x49.png"></a>
+Tony Garnock-Jones, [“Conversational Concurrency”]({{ site.baseurl
+}}/papers/conversational-concurrency-201712310922.pdf), PhD
+dissertation, December 2017, College of Computer and Information
+Science, Northeastern University, Boston, Massachusetts. ([PDF]({{
+site.baseurl }}/papers/conversational-concurrency-201712310922.pdf);
+[HTML](tonyg-dissertation/html/); [Resources](tonyg-dissertation/))
+
+<div class="clear"></div>
 
 ## Papers
 
@@ -142,4 +162,4 @@ In: Proc. ESOP 2014, April 2016, Eindhoven, Netherlands. ([PDF]({{ site.baseurl 
 
 ## Contact
 
-Please feel free to email me at <a href="mailto:tonyg@ccs.neu.edu">tonyg@ccs.neu.edu</a>.
+Please feel free to email me at <a href="mailto:tonyg@leastfixedpoint.com">tonyg@leastfixedpoint.com</a>.

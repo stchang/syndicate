@@ -1,0 +1,919 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"/><title>Conversational Concurrency</title><link rel="stylesheet" href="reveal.js-3.6.0/css/reveal.css"/><link rel="stylesheet" href="presentation.css"/></head><body><div class="reveal">
+<div class="slides">
+<section data-transition="none" class="stage-0"><H3>Conversational Concurrency</H3><SPAN class="all-small-caps">Tony Garnock-Jones</SPAN><P><SMALL style="line-height: 1.5">PhD Dissertation Defense<BR/>December 8th, 2017</SMALL></P></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><P class="ghosted">more than one thing to do</P><H3 class="reddish">Concurrency</H3><P>vs.</P><H3 class="green">Parallelism</H3><P class="ghosted">progress on more than one <EM>at once</EM></P><aside class="notes"><div data-markdown="">Concurrency - many tasks
+
+Parallelism - speed</div></aside></section>
+<section data-transition="none" class="stage-1"><P>more than one thing to do</P><H3 class="reddish">Concurrency</H3><P>vs.</P><H3 class="green">Parallelism</H3><P>progress on more than one <EM>at once</EM></P><aside class="notes"><div data-markdown="">Concurrency - many tasks
+
+Parallelism - speed</div></aside></section></section>
+<section data-transition="none" class="stage-0"><P>Simon Marlow:</P><BLOCKQUOTE>Concurrency is [...] for structuring your program as a collection of
+interacting agents. Parallelism, on the other hand, is just about
+making your programs go faster.</BLOCKQUOTE><P><SMALL><a href="https://mail.haskell.org/pipermail/haskell-cafe/2008-September/047312.html">(in a 2008 post to the Haskell-Cafe mailing list)</a></SMALL></P></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><P>more than one <span class="highlighted">interacting</span> thing</P><H3 class="reddish">Concurrency</H3><DIV class="switch-container" style="height: 8em;"><DIV><P>vs.</P><H3 class="green">Parallelism</H3><P>progress on more than one <EM>at once</EM></P></DIV></DIV><aside class="notes"><div data-markdown="">This work:
+ - focus on *concurrency*
+ - takes a particular perspective</div></aside></section>
+<section data-transition="none" class="stage-1"><P>more than one interacting thing</P><H3 class="reddish">Concurrency</H3><DIV class="switch-container" style="height: 8em;"></DIV><aside class="notes"><div data-markdown="">This work:
+ - focus on *concurrency*
+ - takes a particular perspective</div></aside></section>
+<section data-transition="none" class="stage-2"><P class="ghosted">more than one <span class="highlighted">interacting</span> thing</P><H3 class="reddish">Concurrency</H3><DIV class="switch-container" style="height: 8em;"><DIV><P>is about</P><UL><LI>groups of components</LI><LI>working together</LI><LI>to achieve some shared goal.</LI></UL></DIV></DIV><aside class="notes"><div data-markdown="">This work:
+ - focus on *concurrency*
+ - takes a particular perspective</div></aside></section>
+<section data-transition="none" class="stage-3"><P class="ghosted">more than one interacting thing</P><H3 class="reddish">Concurrency</H3><DIV class="switch-container" style="height: 8em;"><DIV><P>is about</P><H3 class="green">cooperation.</H3></DIV></DIV><aside class="notes"><div data-markdown="">This work:
+ - focus on *concurrency*
+ - takes a particular perspective</div></aside></section></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><DIV class="left"><H4>Coordinate</H4><UL><LI class="ghosted">arrange to take turns performing helpful tasks</LI><LI class="ghosted">via communication</LI></UL><H4>Communicate</H4><UL><LI class="ghosted">build shared understanding</LI><LI class="ghosted">of relevant knowledge</LI><LI class="ghosted">required to achieve the shared goal
+<BR/>
+<SPAN class="ghosted highlighted">= manage <EM>conversational state</EM></SPAN></LI></UL></DIV><aside class="notes"><P>But how do they work together?</P><P>What does it mean to cooperate?</P><P>Act of communication - contribute to shared understanding</P><P>The purpose of communication - to share state.</P><P>To replicate information from peer to peer.</P><P>Comm. that does not affect receiver's worldview
+      literally has no effect.</P></aside></section>
+<section data-transition="none" class="stage-1"><DIV class="left"><H4>Coordinate</H4><UL><LI>arrange to take turns performing helpful tasks</LI><LI class="ghosted">via communication</LI></UL><H4>Communicate</H4><UL><LI class="ghosted">build shared understanding</LI><LI class="ghosted">of relevant knowledge</LI><LI class="ghosted">required to achieve the shared goal
+<BR/>
+<SPAN class="highlighted">= manage <EM>conversational state</EM></SPAN></LI></UL></DIV><aside class="notes"><P>But how do they work together?</P><P>What does it mean to cooperate?</P><P>Act of communication - contribute to shared understanding</P><P>The purpose of communication - to share state.</P><P>To replicate information from peer to peer.</P><P>Comm. that does not affect receiver's worldview
+      literally has no effect.</P></aside></section>
+<section data-transition="none" class="stage-2"><DIV class="left"><H4>Coordinate</H4><UL><LI>arrange to take turns performing helpful tasks</LI><LI>via communication</LI></UL><H4>Communicate</H4><UL><LI class="ghosted">build shared understanding</LI><LI class="ghosted">of relevant knowledge</LI><LI class="ghosted">required to achieve the shared goal
+<BR/>
+<SPAN class="highlighted">= manage <EM>conversational state</EM></SPAN></LI></UL></DIV><aside class="notes"><P>But how do they work together?</P><P>What does it mean to cooperate?</P><P>Act of communication - contribute to shared understanding</P><P>The purpose of communication - to share state.</P><P>To replicate information from peer to peer.</P><P>Comm. that does not affect receiver's worldview
+      literally has no effect.</P></aside></section>
+<section data-transition="none" class="stage-3"><DIV class="left"><H4>Coordinate</H4><UL><LI>arrange to take turns performing helpful tasks</LI><LI>via communication</LI></UL><H4>Communicate</H4><UL><LI>build shared understanding</LI><LI>of relevant knowledge</LI><LI>required to achieve the shared goal
+<BR/>
+<SPAN class="ghosted highlighted">= manage <EM>conversational state</EM></SPAN></LI></UL></DIV><aside class="notes"><P>But how do they work together?</P><P>What does it mean to cooperate?</P><P>Act of communication - contribute to shared understanding</P><P>The purpose of communication - to share state.</P><P>To replicate information from peer to peer.</P><P>Comm. that does not affect receiver's worldview
+      literally has no effect.</P></aside></section>
+<section data-transition="none" class="stage-4"><DIV class="left"><H4>Coordinate</H4><UL><LI>arrange to take turns performing helpful tasks</LI><LI>via communication</LI></UL><H4>Communicate</H4><UL><LI>build shared understanding</LI><LI>of relevant knowledge</LI><LI>required to achieve the shared goal
+<BR/>
+<SPAN class="highlighted">= manage <EM>conversational state</EM></SPAN></LI></UL></DIV><aside class="notes"><P>But how do they work together?</P><P>What does it mean to cooperate?</P><P>Act of communication - contribute to shared understanding</P><P>The purpose of communication - to share state.</P><P>To replicate information from peer to peer.</P><P>Comm. that does not affect receiver's worldview
+      literally has no effect.</P></aside></section></section>
+<section data-transition="none" class="stage-0"><P><img src="Figures/conversation.svg"/></P><P><SMALL>(dissertation fig. 2)</SMALL></P><aside class="notes"><UL><LI>each task shared</LI><LI>entails acts of communication</LI><LI>in the frame of an overall conversation</LI></UL><UL><LI>each act contributes to overall conv. state of shared task</LI></UL><UL><LI>when the shared task has subtasks,</LI><LI>there are often sub-conversations</LI><LI>each framed within the overall context</LI><LI>and logically dependent on the overall conversation</LI></UL></aside></section>
+<section data-transition="none" class="stage-0"><TABLE class="summary-table"><TR><TD>Concurrency is about</TD><TD><EM>cooperation</EM></TD></TR><TR><TD>through</TD><TD><EM>communication</EM></TD></TR><TR><TD>of</TD><TD><EM>conversational state</EM></TD></TR></TABLE><aside class="notes"><P>So, all told, we could say that...</P></aside></section>
+<section data-transition="none" class="stage-0 unpredictability"><H3>Unpredictability</H3><UL class="no-list-markers"><LI><SPAN class="check-mark">✓</SPAN> pure, total functions</LI><LI><SPAN class="cross-mark">✗</SPAN> effects</LI><LI><SPAN class="cross-mark">✗</SPAN> coroutines</LI><LI><SPAN class="cross-mark">✗</SPAN> threads &amp; shared memory</LI><LI><SPAN class="cross-mark">✗</SPAN> network conditions</LI></UL><aside class="notes"><P>But there's a second important aspect to concurrency ...</P><P>...</P><UL><LI>Partly about programmer control.</LI><LI>The unknown is unpredictable.</LI><LI>A function cannot usually "predict" its arguments.</LI></UL></aside></section>
+<section data-transition="none" class="stage-0"><TABLE class="summary-table"><TR><TD>Concurrency is about</TD><TD><EM>cooperation</EM></TD></TR><TR><TD>through</TD><TD><EM>communication</EM></TD></TR><TR><TD>of</TD><TD><EM>conversational state</EM></TD></TR><TR><TD>in an</TD><TD><EM>unpredictable</EM> setting</TD></TR></TABLE><aside class="notes"><P>... so we could expect our languages:</P><UL><LI>to make cooperation easy</LI><LI>to make communication easy and useful</LI><LI>to help synchronize perspectives on a conversation's state</LI><LI>to minimize or mitigate unpredictability, incl partial failure</LI></UL></aside></section>
+<section data-transition="none" class="stage-0"><DIV class="thesisstatement"><SPAN class="language-name">Syndicate</SPAN> provides a new, effective, realizable linguistic mechanism for sharing state in a concurrent setting.</DIV><aside class="notes"><div data-markdown="">
+To this end, I have developed new programming language design,
+Syndicate, which rests on a new model of concurrent computation, the
+dataspace model.
+
+This brings me to my thesis statement:</div></aside></section>
+<section data-transition="none" class="stage-0 thesis-expanded"><section data-transition="none" class="stage-0"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">design landscape</span></TD></TR><TR><TD>effective</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">evaluation</span></TD></TR><TR><TD>realizable</TD><TD><span class="ghosted">→</span></TD><TD><SPAN class="ghosted">prototypes, tries</SPAN></TD></TR><TR><TD>linguistic</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">reified conversations</span></TD></TR><TR><TD>mechanism for sharing state</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">dataspace model</span></TD></TR></TABLE><P>in a concurrent setting.</P><aside class="notes"><P>not distributed - Deutsch's fallacies - control latency, scheduling</P></aside></section>
+<section data-transition="none" class="stage-1"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">design landscape</span></TD></TR><TR><TD>effective</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">evaluation</span></TD></TR><TR><TD>realizable</TD><TD><span class="ghosted">→</span></TD><TD><SPAN class="ghosted">prototypes, tries</SPAN></TD></TR><TR><TD>linguistic</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">reified conversations</span></TD></TR><TR><TD>mechanism for sharing state</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">dataspace model</span></TD></TR></TABLE><P>in a <span class="highlighted">concurrent setting.</span></P><aside class="notes"><P>not distributed - Deutsch's fallacies - control latency, scheduling</P></aside></section>
+<section data-transition="none" class="stage-2"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">design landscape</span></TD></TR><TR><TD>effective</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">evaluation</span></TD></TR><TR><TD>realizable</TD><TD><span class="ghosted">→</span></TD><TD><SPAN class="ghosted">prototypes, tries</SPAN></TD></TR><TR><TD>linguistic</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">reified conversations</span></TD></TR><TR class="highlighted"><TD>mechanism for sharing state</TD><TD>→</TD><TD>dataspace model</TD></TR></TABLE><P>in a concurrent setting.</P><aside class="notes"><P>The dataspace model is, at heart</P><P>a mechanism for sharing state among neighboring
+  concurrent components.</P><P>Focus on mechanisms for sharing state because
+      communication and coordination follow as special cases.</P></aside></section>
+<section data-transition="none" class="stage-3"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted highlighted">design landscape</span></TD></TR><TR><TD>effective</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">evaluation</span></TD></TR><TR><TD>realizable</TD><TD><span class="ghosted">→</span></TD><TD><SPAN class="ghosted">prototypes, tries</SPAN></TD></TR><TR class="highlighted"><TD>linguistic</TD><TD>→</TD><TD>reified conversations</TD></TR><TR><TD>mechanism for sharing state</TD><TD>→</TD><TD>dataspace model</TD></TR></TABLE><P>in a concurrent setting.</P><aside class="notes"><P>DS model explains communication and coordination
+   among components</P><P>Does not offer assistance in structuring
+     internals of components.</P><P>New language constructs reifying conversations within an actor,</P><P>bridge between the language’s model and the dataspace
+       style of interaction</P></aside></section>
+<section data-transition="none" class="stage-4"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">design landscape</span></TD></TR><TR><TD>effective</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted highlighted">evaluation</span></TD></TR><TR class="highlighted"><TD>realizable</TD><TD>→</TD><TD><SPAN>prototypes, tries</SPAN></TD></TR><TR><TD>linguistic</TD><TD>→</TD><TD>reified conversations</TD></TR><TR><TD>mechanism for sharing state</TD><TD>→</TD><TD>dataspace model</TD></TR></TABLE><P>in a concurrent setting.</P><aside class="notes"><P>I demonstrate realizability with two prototype
+  <SPAN class="language-name">Syndicate</SPAN> implementations (Racket, JS)</P><P>And a custom data structure based on the old idea
+    of a trie to allow efficient implementation</P></aside></section>
+<section data-transition="none" class="stage-5"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD><span class="ghosted">→</span></TD><TD><span class="ghosted">design landscape</span></TD></TR><TR class="highlighted"><TD>effective</TD><TD>→</TD><TD>evaluation</TD></TR><TR><TD>realizable</TD><TD>→</TD><TD><SPAN>prototypes, tries</SPAN></TD></TR><TR><TD>linguistic</TD><TD>→</TD><TD>reified conversations</TD></TR><TR><TD>mechanism for sharing state</TD><TD>→</TD><TD>dataspace model</TD></TR></TABLE><P>in a concurrent setting.</P><aside class="notes"><P>Dissertation: many examples solving various programming problems</P><P>Also, have developed a handful of larger applications</P><P>Based on these, argue:</P><UL><LI><SPAN class="language-name">Syndicate</SPAN> eliminates various patterns</LI><LI>thus simplifying programming tasks</LI></UL></aside></section>
+<section data-transition="none" class="stage-6"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR class="highlighted"><TD>new</TD><TD>→</TD><TD>design landscape</TD></TR><TR><TD>effective</TD><TD>→</TD><TD>evaluation</TD></TR><TR><TD>realizable</TD><TD>→</TD><TD><SPAN>prototypes, tries</SPAN></TD></TR><TR><TD>linguistic</TD><TD>→</TD><TD>reified conversations</TD></TR><TR><TD>mechanism for sharing state</TD><TD>→</TD><TD>dataspace model</TD></TR></TABLE><P>in a concurrent setting.</P><aside class="notes"><P>Finally, it's a new idea.</P><P>Dissertation: design landscape</P><P>Talk: brief mention of the actor model and the tuplespace model</P></aside></section>
+<section data-transition="none" class="stage-7"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD>→</TD><TD>design landscape</TD></TR><TR><TD>effective</TD><TD>→</TD><TD>evaluation</TD></TR><TR><TD>realizable</TD><TD>→</TD><TD><SPAN>prototypes, tries</SPAN></TD></TR><TR><TD>linguistic</TD><TD>→</TD><TD>reified conversations</TD></TR><TR><TD>mechanism for sharing state</TD><TD>→</TD><TD>dataspace model</TD></TR></TABLE><P>in a concurrent setting.</P><aside class="notes"><P>Finally, it's a new idea.</P><P>Dissertation: design landscape</P><P>Talk: brief mention of the actor model and the tuplespace model</P></aside></section>
+<section data-transition="none" class="stage-8"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD>→</TD><TD>design landscape</TD></TR><TR><TD>effective</TD><TD>→</TD><TD>evaluation</TD></TR><TR><TD>realizable</TD><TD>→</TD><TD><SPAN>prototypes, <span class="highlighted">tries</span></SPAN></TD></TR><TR><TD>linguistic</TD><TD>→</TD><TD>reified conversations</TD></TR><TR><TD>mechanism for sharing state</TD><TD>→</TD><TD><span class="highlighted">dataspace model</span></TD></TR></TABLE><P>in a concurrent setting.</P><aside class="notes"><P>At the time of my proposal, ...</P><P>dataspace model + a few key properties</P><P>Racket prototype of dataspace model only</P><P>assertion-trie data structure</P></aside></section>
+<section data-transition="none" class="stage-9"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD>→</TD><TD><span class="highlighted">design landscape</span></TD></TR><TR><TD>effective</TD><TD>→</TD><TD><span class="highlighted">evaluation</span></TD></TR><TR><TD>realizable</TD><TD>→</TD><TD><SPAN><span class="highlighted">prototypes,</span> tries</SPAN></TD></TR><TR><TD>linguistic</TD><TD>→</TD><TD><span class="highlighted">reified conversations</span></TD></TR><TR><TD>mechanism for sharing state</TD><TD>→</TD><TD>dataspace model</TD></TR></TABLE><P>in a concurrent setting.</P><aside class="notes"><P>Since then,</P><UL><LI>conversational language design features</LI><LI>two complete prototype implementations</LI><LI>qualitative, pattern-based evaluation</LI><LI>analysis in terms of a broader concurrency design landscape</LI></UL></aside></section>
+<section data-transition="none" class="stage-10"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD>→</TD><TD>design landscape</TD></TR><TR><TD>effective</TD><TD>→</TD><TD>evaluation</TD></TR><TR><TD>realizable</TD><TD>→</TD><TD><SPAN>prototypes, tries</SPAN></TD></TR><TR><TD>linguistic</TD><TD>→</TD><TD>reified conversations</TD></TR><TR><TD>mechanism for sharing state</TD><TD>→</TD><TD>dataspace model</TD></TR></TABLE><P>in a concurrent setting.</P><aside class="notes"><P>Since then,</P><UL><LI>conversational language design features</LI><LI>two complete prototype implementations</LI><LI>qualitative, pattern-based evaluation</LI><LI>analysis in terms of a broader concurrency design landscape</LI></UL></aside></section></section>
+<section data-transition="none" class="stage-0"><H3>Roadmap</H3><OL><LI>Dataspace model and assertion tries</LI><LI>Reifying conversations</LI><LI>Programming experience with <SPAN class="language-name">Syndicate</SPAN></LI><LI>Evaluation</LI><LI>Conclusion &amp; future work</LI></OL></section>
+<section data-transition="none" class="stage-0"><H3>Roadmap</H3><OL><LI class="highlighted">Dataspace model and assertion tries</LI><LI>Reifying conversations</LI><LI>Programming experience with <SPAN class="language-name">Syndicate</SPAN></LI><LI>Evaluation</LI><LI>Conclusion &amp; future work</LI></OL></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><H3>Dataspace model</H3><img src="Figures/presentation-pict-0.svg"/><aside class="notes"><P><SPAN class="language-name">Syndicate</SPAN>: based on a collection of actors running in a dataspace</P><UL><LI>borrowed "actor" from actor model</LI><LI>actor analog of "dataspace": msg fabric</LI><LI>"dataspace": chosen to recall "tuplespace" from TS model</LI><LI>DS model: kind of a hybrid of actor + tuplespace models</LI></UL><P>1. each DS is an actor: recursive (dis)aggregation...</P></aside></section>
+<section data-transition="none" class="stage-1"><H3>Dataspace model</H3><img src="Figures/presentation-pict-1.svg"/><aside class="notes"><P>2. ... main diff: instead of messages, actors in a
+   dataspace communicate by placing <EM>assertions</EM>
+   in their shared dataspace.</P><P>An assertion is just a record, a piece of data:
+   essentially, an S-expression.</P><P>Similar to the TS model: where a shared "blackboard"-style
+        store holds "tuples".</P></aside></section></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-2.svg"/><P>Actions: <TT>eval</TT>,
+         <TT>out</TT>,
+         <TT>rd</TT>,
+         <TT>in</TT></P><P><CODE> </CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-1"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-3.svg"/><P>Actions: <TT class="highlighted">eval</TT>,
+         <TT>out</TT>,
+         <TT>rd</TT>,
+         <TT>in</TT></P><P><CODE> </CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-2"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-4.svg"/><P>Actions: <TT>eval</TT>,
+         <TT>out</TT>,
+         <TT>rd</TT>,
+         <TT>in</TT></P><P><CODE> </CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-3"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-5.svg"/><P>Actions: <TT>eval</TT>,
+         <TT class="highlighted">out</TT>,
+         <TT>rd</TT>,
+         <TT>in</TT></P><P><CODE>(out (balance 'account1 123.0))</CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-4"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-6.svg"/><P>Actions: <TT>eval</TT>,
+         <TT class="highlighted">out</TT>,
+         <TT>rd</TT>,
+         <TT>in</TT></P><P><CODE>(out (balance 'account1 123.0))</CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-5"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-7.svg"/><P>Actions: <TT>eval</TT>,
+         <TT>out</TT>,
+         <TT>rd</TT>,
+         <TT>in</TT></P><P><CODE> </CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-6"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-8.svg"/><P>Actions: <TT>eval</TT>,
+         <TT>out</TT>,
+         <TT class="highlighted">rd</TT>,
+         <TT>in</TT></P><P><CODE>(rd (balance 'account1 _))</CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-7"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-9.svg"/><P>Actions: <TT>eval</TT>,
+         <TT>out</TT>,
+         <TT>rd</TT>,
+         <TT>in</TT></P><P><CODE> </CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-8"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-10.svg"/><P>Actions: <TT>eval</TT>,
+         <TT>out</TT>,
+         <TT>rd</TT>,
+         <TT class="highlighted">in</TT></P><P><CODE>(in 'lock)</CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-9"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-11.svg"/><P>Actions: <TT>eval</TT>,
+         <TT>out</TT>,
+         <TT>rd</TT>,
+         <TT class="highlighted">in</TT></P><P><CODE>(in 'lock)</CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-10"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-12.svg"/><P>Actions: <TT>eval</TT>,
+         <TT>out</TT>,
+         <TT>rd</TT>,
+         <TT>in</TT></P><P><CODE> </CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-11"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-13.svg"/><P>Actions: <TT>eval</TT>,
+         <TT>out</TT>,
+         <TT>rd</TT>,
+         <TT>in</TT></P><P><CODE> </CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section>
+<section data-transition="none" class="stage-12"><H3><span class="green">Tuplespace model</span></H3><img src="Figures/presentation-pict-14.svg"/><P>Actions: <TT>eval</TT>,
+         <TT>out</TT>,
+         <TT>rd</TT>,
+         <TT>in</TT></P><P><CODE> </CODE></P><aside class="notes"><P>Tuples have independent existence</P><P>Tuples move from place to place</P><P>"lost tuple" problem</P><P>Reads are blocking operations</P><P>Extensions allow event-handlers for reacting to changes
+           in the tuplespace</P></aside></section></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><H3>Dataspace model</H3><img src="Figures/presentation-pict-15.svg"/><aside class="notes"><P>By contrast, in DS model, job of DS is to keep actors
+   up-to-date as the contents of the dataspace changes.</P><P>In effect: a DS <EM>replicates</EM> assertions among the
+   actors it contains.</P></aside></section>
+<section data-transition="none" class="stage-1"><H3>Dataspace model</H3><img src="Figures/presentation-pict-16.svg"/><aside class="notes"><P>Each assertion recorded with provenance:
+     track who asserted what</P></aside></section>
+<section data-transition="none" class="stage-2"><H3>Dataspace model</H3><img src="Figures/presentation-pict-17.svg"/><aside class="notes"><P>Assertions are like Prolog assertions -
+           ground facts in a logic-programming system</P><P>Multiple assertions of the same value: equivalent to just one</P><P>DS replicates a set view of a bag of assertions</P><P>Crash → owned assertions removed</P><P>Compare TS "lost tuple" problem</P></aside></section>
+<section data-transition="none" class="stage-3"><H3>Dataspace model</H3><img src="Figures/presentation-pict-18.svg"/><aside class="notes"><P>Assertions are like Prolog assertions -
+           ground facts in a logic-programming system</P><P>Multiple assertions of the same value: equivalent to just one</P><P>DS replicates a set view of a bag of assertions</P><P>Crash → owned assertions removed</P><P>Compare TS "lost tuple" problem</P></aside></section>
+<section data-transition="none" class="stage-4"><H3>Dataspace model</H3><img src="Figures/presentation-pict-19.svg"/><aside class="notes"><P>Assertions are like Prolog assertions -
+           ground facts in a logic-programming system</P><P>Multiple assertions of the same value: equivalent to just one</P><P>DS replicates a set view of a bag of assertions</P><P>Crash → owned assertions removed</P><P>Compare TS "lost tuple" problem</P></aside></section>
+<section data-transition="none" class="stage-5"><H3>Dataspace model</H3><img src="Figures/presentation-pict-20.svg"/><aside class="notes"><P>Assertions are like Prolog assertions -
+           ground facts in a logic-programming system</P><P>Multiple assertions of the same value: equivalent to just one</P><P>DS replicates a set view of a bag of assertions</P><P>Crash → owned assertions removed</P><P>Compare TS "lost tuple" problem</P></aside></section></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><P><CODE>(observe <I>P</I>)</CODE></P><P>Assertion of <EM>interest</EM> in <CODE><I>P</I></CODE></P><DIV class="ghosted"><HR/><P><CODE>(color 'boat 'blue)</CODE></P><P><SMALL>"The color of the boat is blue"</SMALL></P></DIV><DIV class="ghosted"><P><CODE>(observe (color 'boat _))</CODE></P><P><SMALL>"Interest exists in the color of the boat being anything at all"</SMALL></P></DIV><aside class="notes"><P>Tuplespace model: each subprogram uses patterns over
+           tuples to select items of interest.</P><P>Likewise, DS: each actor uses patterns to select assertions
+          of interest.</P><P>Big difference: it asserts interest in other assertions</P><P>DS uses <CODE>observe</CODE> assertions to...</P><P>Each actor gets events describing every relevant change
+     and only relevant changes to the dataspace.</P><P>Messages too: "short" assertions</P></aside></section>
+<section data-transition="none" class="stage-1"><P><CODE>(observe <I>P</I>)</CODE></P><P>Assertion of <EM>interest</EM> in <CODE><I>P</I></CODE></P><DIV><HR/><P><CODE>(color 'boat 'blue)</CODE></P><P><SMALL>"The color of the boat is blue"</SMALL></P></DIV><DIV class="ghosted"><P><CODE>(observe (color 'boat _))</CODE></P><P><SMALL>"Interest exists in the color of the boat being anything at all"</SMALL></P></DIV><aside class="notes"><P>Tuplespace model: each subprogram uses patterns over
+           tuples to select items of interest.</P><P>Likewise, DS: each actor uses patterns to select assertions
+          of interest.</P><P>Big difference: it asserts interest in other assertions</P><P>DS uses <CODE>observe</CODE> assertions to...</P><P>Each actor gets events describing every relevant change
+     and only relevant changes to the dataspace.</P><P>Messages too: "short" assertions</P></aside></section>
+<section data-transition="none" class="stage-2"><P><CODE>(observe <I>P</I>)</CODE></P><P>Assertion of <EM>interest</EM> in <CODE><I>P</I></CODE></P><DIV><HR/><P><CODE>(color 'boat 'blue)</CODE></P><P><SMALL>"The color of the boat is blue"</SMALL></P></DIV><DIV><P><CODE>(observe (color 'boat _))</CODE></P><P><SMALL>"Interest exists in the color of the boat being anything at all"</SMALL></P></DIV><aside class="notes"><P>Tuplespace model: each subprogram uses patterns over
+           tuples to select items of interest.</P><P>Likewise, DS: each actor uses patterns to select assertions
+          of interest.</P><P>Big difference: it asserts interest in other assertions</P><P>DS uses <CODE>observe</CODE> assertions to...</P><P>Each actor gets events describing every relevant change
+     and only relevant changes to the dataspace.</P><P>Messages too: "short" assertions</P></aside></section></section>
+<section data-transition="none" class="stage-0"><DIV><img src="slides/ch4-stx-programs.png" style="width: 55%;"/></DIV><H3>Figure 11, chapter 4</H3><aside class="notes"><P>Dissertation: program syntax, evaluation syntax,
+              reduction rules</P></aside></section>
+<section data-transition="none" class="stage-0"><DIV><img src="slides/ch4-stx-eval.png" style="width: 66%;"/></DIV><H3>Figure 13, chapter 4</H3></section>
+<section data-transition="none" class="stage-0"><DIV><img src="slides/ch4-reductions.png" style="width: 66%;"/></DIV><H3>Figure 14, chapter 4</H3><aside class="notes"><P>Rather than go into extreme detail, I will show
+       enough to get the intuition and follow the
+       examples.</P></aside></section>
+<section data-transition="none" class="stage-0"><TABLE class="summary-table"><TR><TH>Actor</TH><TD>Event transducer</TD></TR><TR><TD> </TD></TR><TR><TH>Actions</TH><TD>Spawn new actor
+<BR/>
+Replace assertions
+<BR/>
+Message</TD></TR><TR><TD> </TD></TR><TR><TH>Events</TH><TD>Dataspace has changed
+<BR/>
+Message</TD></TR></TABLE><aside class="notes"><P>Key things: Actors are roughly functions from an event to actions</P><P>plus a private state value they can access and update</P><P>Actions are just like the actor model, except can update its own
+        assertion set</P><P>Events likewise like actor model, except events describe relevant
+       changes to the aggregate assertion set of the dataspace</P></aside></section>
+<section data-transition="none" class="stage-0"><img src="Figures/presentation-pict-21.svg"/><P>Reduction rules: deliver events;
+          gather actions;
+          interpret actions;
+          step contained actors</P><aside class="notes"><P>The syntax can be drawn graphically. Often I will elide the details</P><P>Every actor connects to its DS via two queues</P><P>Every DS has a queue of pending actions to interpret</P><P>It also tracks <EM>local</EM> names for actors</P><P>Names not accessible to programmer!</P><P>Finally, DS recursive: actor in a wider DS</P></aside></section>
+<section data-transition="none" class="stage-0 dns-example-protocol"><section data-transition="none" class="stage-0"><P><CODE>(struct dns-entry (name address))</CODE></P><DIV class="ghosted"><HR/><P><CODE>(dns-entry "localhost" "127.0.0.1")</CODE></P><P><SMALL>"The address of <TT>localhost</TT> is <TT>127.0.0.1</TT>"</SMALL></P></DIV><DIV class="ghosted"><P><CODE>(observe (dns-entry "localhost" _))</CODE></P><P><SMALL>"Interest exists in the address of <TT>localhost</TT>"</SMALL></P></DIV><DIV class="ghosted"><P><CODE>(observe (observe (dns-entry _ _)))</CODE></P><P><SMALL>"Interest exists in <EM>interest in</EM> <TT>dns-entry</TT> records"</SMALL></P></DIV><aside class="notes"><P>Concrete example: local DNS API -- for a library</P></aside></section>
+<section data-transition="none" class="stage-1"><P><CODE>(struct dns-entry (name address))</CODE></P><DIV><HR/><P><CODE>(dns-entry "localhost" "127.0.0.1")</CODE></P><P><SMALL>"The address of <TT>localhost</TT> is <TT>127.0.0.1</TT>"</SMALL></P></DIV><DIV class="ghosted"><P><CODE>(observe (dns-entry "localhost" _))</CODE></P><P><SMALL>"Interest exists in the address of <TT>localhost</TT>"</SMALL></P></DIV><DIV class="ghosted"><P><CODE>(observe (observe (dns-entry _ _)))</CODE></P><P><SMALL>"Interest exists in <EM>interest in</EM> <TT>dns-entry</TT> records"</SMALL></P></DIV><aside class="notes"><P>Concrete example: local DNS API -- for a library</P></aside></section>
+<section data-transition="none" class="stage-2"><P><CODE>(struct dns-entry (name address))</CODE></P><DIV><HR/><P><CODE>(dns-entry "localhost" "127.0.0.1")</CODE></P><P><SMALL>"The address of <TT>localhost</TT> is <TT>127.0.0.1</TT>"</SMALL></P></DIV><DIV><P><CODE>(observe (dns-entry "localhost" _))</CODE></P><P><SMALL>"Interest exists in the address of <TT>localhost</TT>"</SMALL></P></DIV><DIV class="ghosted"><P><CODE>(observe (observe (dns-entry _ _)))</CODE></P><P><SMALL>"Interest exists in <EM>interest in</EM> <TT>dns-entry</TT> records"</SMALL></P></DIV><aside class="notes"><P>Concrete example: local DNS API -- for a library</P></aside></section>
+<section data-transition="none" class="stage-3"><P><CODE>(struct dns-entry (name address))</CODE></P><DIV><HR/><P><CODE>(dns-entry "localhost" "127.0.0.1")</CODE></P><P><SMALL>"The address of <TT>localhost</TT> is <TT>127.0.0.1</TT>"</SMALL></P></DIV><DIV><P><CODE>(observe (dns-entry "localhost" _))</CODE></P><P><SMALL>"Interest exists in the address of <TT>localhost</TT>"</SMALL></P></DIV><DIV><P><CODE>(observe (observe (dns-entry _ _)))</CODE></P><P><SMALL>"Interest exists in <EM>interest in</EM> <TT>dns-entry</TT> records"</SMALL></P></DIV><aside class="notes"><P>Concrete example: local DNS API -- for a library</P></aside></section></section>
+<section data-transition="none" class="stage-0 dns-example"><section data-transition="none" class="stage-0"><TABLE class="summary-table"><TR class="ghosted" style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-22.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-1"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-23.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-2"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-24.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-3"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-25.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-4"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-26.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-5"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-27.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-6"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted" style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-28.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-7"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-29.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-8"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-30.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-9"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-31.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-10"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-32.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-11"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-33.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-12"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-34.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-13"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-35.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-14"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-36.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-15"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-37.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-16"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-38.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-17"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-39.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-18"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-40.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-19"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-41.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-20"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-42.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-21"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-43.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-22"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-44.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-23"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-45.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-24"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-46.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-25"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-47.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section>
+<section data-transition="none" class="stage-26"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR></TABLE><img src="Figures/presentation-pict-48.svg"/><aside class="notes"><P>Server, Cache: MULTIPLE CONCURRENT ENTRIES</P></aside></section></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><DIV class="switch-container" style="height: 8em;"><img src="Figures/presentation-pict-49.svg"/></DIV><DIV class="ghosted"><img src="Figures/presentation-pict-50.svg"/></DIV><aside class="notes"><P>Reads a nested structure left-to-right as a sequence of tokens</P><P>Takes care to share structure</P></aside></section>
+<section data-transition="none" class="stage-1"><DIV class="switch-container" style="height: 8em;"><img src="Figures/presentation-pict-51.svg"/></DIV><DIV><img src="Figures/presentation-pict-52.svg"/></DIV><aside class="notes"><P>Reads a nested structure left-to-right as a sequence of tokens</P><P>Takes care to share structure</P></aside></section>
+<section data-transition="none" class="stage-2"><DIV class="switch-container" style="height: 8em;"><UL class="no-list-markers"><LI>Supports S-expression-like data <EM>and wildcards</EM> well</LI><LI>Closed under ∪, ∩, −</LI><LI>Reasonably efficient ∪, ∩, −</LI><LI>Reasonably compact</LI><LI>Gives efficient routing of assertions and messages</LI></UL></DIV><DIV><img src="Figures/presentation-pict-54.svg"/></DIV><aside class="notes"><P>Reads a nested structure left-to-right as a sequence of tokens</P><P>Takes care to share structure</P></aside></section></section>
+<section data-transition="none" class="stage-0"><H3>Properties</H3></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><UL class="no-list-markers"><LI><SPAN class="check-mark">✓</SPAN> No errors and stuck-free</LI><LI><SPAN class="check-mark">✓</SPAN> Deterministic</LI><LI><SPAN class="check-mark">✓</SPAN> Order-preserving</LI><LI class="ghosted"><SPAN class="check-mark">✓</SPAN> Conversational "soundness", "completeness"</LI></UL><UL class="ghosted"><LI>actions correctly interpreted</LI><LI>an event for every relevant change</LI><LI>every event is
+      <UL><LI><EM>truthful</EM>,</LI><LI><EM>relevant</EM>, and</LI><LI><EM>complete</EM>.</LI></UL></LI></UL><aside class="notes"><P>The dataspace is network-like: you don't want your network
+    to crash or "signal an exception"</P><P>Determinism: mostly to show a whole DS can be viewed
+             as an event-transducing function</P><P>Can relax determinism with simple changes to the reduction rules</P><P>Order-preserving: programmer relies on this</P><P>NEW: conversational soundness/completeness</P></aside></section>
+<section data-transition="none" class="stage-1"><UL class="no-list-markers"><LI><SPAN class="check-mark">✓</SPAN> No errors and stuck-free</LI><LI><SPAN class="check-mark">✓</SPAN> Deterministic</LI><LI><SPAN class="check-mark">✓</SPAN> Order-preserving</LI><LI><SPAN class="check-mark">✓</SPAN> Conversational "soundness", "completeness"</LI></UL><UL class="ghosted"><LI>actions correctly interpreted</LI><LI>an event for every relevant change</LI><LI>every event is
+      <UL><LI><EM>truthful</EM>,</LI><LI><EM>relevant</EM>, and</LI><LI><EM>complete</EM>.</LI></UL></LI></UL><aside class="notes"><P>The dataspace is network-like: you don't want your network
+    to crash or "signal an exception"</P><P>Determinism: mostly to show a whole DS can be viewed
+             as an event-transducing function</P><P>Can relax determinism with simple changes to the reduction rules</P><P>Order-preserving: programmer relies on this</P><P>NEW: conversational soundness/completeness</P></aside></section>
+<section data-transition="none" class="stage-2"><UL class="no-list-markers"><LI class="greyout"><SPAN class="check-mark">✓</SPAN> No errors and stuck-free</LI><LI class="greyout"><SPAN class="check-mark">✓</SPAN> Deterministic</LI><LI class="greyout"><SPAN class="check-mark">✓</SPAN> Order-preserving</LI><LI><SPAN class="check-mark">✓</SPAN> Conversational "soundness", "completeness"</LI></UL><UL><LI>actions correctly interpreted</LI><LI>an event for every relevant change</LI><LI>every event is
+      <UL><LI><EM>truthful</EM>,</LI><LI><EM>relevant</EM>, and</LI><LI><EM>complete</EM>.</LI></UL></LI></UL><aside class="notes"><P>The dataspace is network-like: you don't want your network
+    to crash or "signal an exception"</P><P>Determinism: mostly to show a whole DS can be viewed
+             as an event-transducing function</P><P>Can relax determinism with simple changes to the reduction rules</P><P>Order-preserving: programmer relies on this</P><P>NEW: conversational soundness/completeness</P></aside></section></section>
+<section data-transition="none" class="stage-0 scrollable"><DIV><img src="slides/simple-dns-trace.svg"/></DIV><aside class="notes"><P>NEW: event trace</P><P>Programming model, mental model - line up with reduction semantics</P><P>So does the implementation</P><P>Capture log entries = reduction steps = useful information for programmer</P><P>Quite a direct rendering of a trace, generated by the implementation</P></aside></section>
+<section data-transition="none" class="stage-0"><H3>Roadmap</H3><OL><LI>Dataspace model and assertion tries</LI><LI class="highlighted">Reifying conversations</LI><LI>Programming experience with <SPAN class="language-name">Syndicate</SPAN></LI><LI>Evaluation</LI><LI>Conclusion &amp; future work</LI></OL><aside class="notes"><P>DS model lets us communicate changes in
+   conversational state</P><P>Awesome!</P><P>However, most actors engage in multiple
+         conversations simultaneously.</P></aside></section>
+<section data-transition="none" class="stage-0 conversation-animation"><svg id="conversation-animation" width="960" height="700"></svg><aside class="notes"><P>Consider the DNS cache actor.</P><P>When there's something to cache, it communicates with
+     both the "server" and "timer" actors for that item.</P><P>And there will be multiple items active at once.</P><P>Keeping track of which assertions relate to which of
+        an actor's tasks and responsibilities is difficult,
+        error prone, ripe for automation.</P><P>We need support in the languages we use to write
+   leaf actors to help us interpret the events we
+   receive and produce appropriate actions corresponding
+   to the actor's changes in internal state.</P></aside></section>
+<section data-transition="none" class="stage-0"><H3>Facet</H3><UL><LI>Assertions</LI><LI>Local fields</LI><LI>Data flow → control flow</LI><LI>Control flow → data flow</LI><LI>Local data → shared data</LI><LI>Shared data → local data</LI><LI>Subfacets</LI></UL><aside class="notes"><P>In response to this need, I've introduced a new concept
+   called a <EM>facet</EM>.</P><P>Scopes state/behavior for partic. conv. within an actor</P><P>Roughly: everything an actor needs to know and do
+         within a partic. conv. frame</P><UL><LI>public aspect</LI><LI>private aspect</LI><LI>...</LI></UL></aside></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><DIV class="bigger"><pre><code class="scheme">(react <SPAN>(field [<EM>field-name</EM> <EM>expr</EM>] ...)</SPAN>
+       <EM>endpoint-expr</EM> ...)
+
+<EM>endpoint-expr</EM>
+  = <SPAN>(assert <EM>expr</EM>)</SPAN>
+<SPAN>  | (on (asserted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (retracted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (message <EM>pattern</EM>) <EM>expr</EM> ...)</SPAN>
+<SPAN>  | (on-start <EM>expr</EM> ...)
+  | (on-stop <EM>expr</EM> ...)</SPAN></code></pre><pre class="ghosted"><code class="scheme"><SPAN>(stop-when <EM>E</EM> <EM>expr</EM> ...)
+  = (on <EM>E</EM> (stop-facet (current-facet-id) <EM>expr</EM> ...))</SPAN>
+
+<SPAN>(during <EM>pattern</EM> <EM>endpoint-expr</EM> ...)
+  = (on (asserted <EM>pattern</EM>)
+        (react (stop-when (retracted <EM>pattern′</EM>))
+               <EM>endpoint-expr</EM> ...))</SPAN></code></pre></DIV></section>
+<section data-transition="none" class="stage-1"><DIV class="bigger"><pre><code class="scheme">(react <MARK>(field [<EM>field-name</EM> <EM>expr</EM>] ...)</MARK>
+       <EM>endpoint-expr</EM> ...)
+
+<EM>endpoint-expr</EM>
+  = <SPAN>(assert <EM>expr</EM>)</SPAN>
+<SPAN>  | (on (asserted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (retracted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (message <EM>pattern</EM>) <EM>expr</EM> ...)</SPAN>
+<SPAN>  | (on-start <EM>expr</EM> ...)
+  | (on-stop <EM>expr</EM> ...)</SPAN></code></pre><pre class="ghosted"><code class="scheme"><MARK>(stop-when <EM>E</EM> <EM>expr</EM> ...)
+  = (on <EM>E</EM> (stop-facet (current-facet-id) <EM>expr</EM> ...))</MARK>
+
+<SPAN>(during <EM>pattern</EM> <EM>endpoint-expr</EM> ...)
+  = (on (asserted <EM>pattern</EM>)
+        (react (stop-when (retracted <EM>pattern′</EM>))
+               <EM>endpoint-expr</EM> ...))</SPAN></code></pre></DIV></section>
+<section data-transition="none" class="stage-2"><DIV class="bigger"><pre><code class="scheme">(react <SPAN>(field [<EM>field-name</EM> <EM>expr</EM>] ...)</SPAN>
+       <EM>endpoint-expr</EM> ...)
+
+<EM>endpoint-expr</EM>
+  = <MARK>(assert <EM>expr</EM>)</MARK>
+<SPAN>  | (on (asserted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (retracted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (message <EM>pattern</EM>) <EM>expr</EM> ...)</SPAN>
+<SPAN>  | (on-start <EM>expr</EM> ...)
+  | (on-stop <EM>expr</EM> ...)</SPAN></code></pre><pre class="ghosted"><code class="scheme"><SPAN>(stop-when <EM>E</EM> <EM>expr</EM> ...)
+  = (on <EM>E</EM> (stop-facet (current-facet-id) <EM>expr</EM> ...))</SPAN>
+
+<MARK>(during <EM>pattern</EM> <EM>endpoint-expr</EM> ...)
+  = (on (asserted <EM>pattern</EM>)
+        (react (stop-when (retracted <EM>pattern′</EM>))
+               <EM>endpoint-expr</EM> ...))</MARK></code></pre></DIV></section>
+<section data-transition="none" class="stage-3"><DIV class="bigger"><pre><code class="scheme">(react <SPAN>(field [<EM>field-name</EM> <EM>expr</EM>] ...)</SPAN>
+       <EM>endpoint-expr</EM> ...)
+
+<EM>endpoint-expr</EM>
+  = <SPAN>(assert <EM>expr</EM>)</SPAN>
+<MARK>  | (on (asserted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (retracted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (message <EM>pattern</EM>) <EM>expr</EM> ...)</MARK>
+<SPAN>  | (on-start <EM>expr</EM> ...)
+  | (on-stop <EM>expr</EM> ...)</SPAN></code></pre><pre class="ghosted"><code class="scheme"><SPAN>(stop-when <EM>E</EM> <EM>expr</EM> ...)
+  = (on <EM>E</EM> (stop-facet (current-facet-id) <EM>expr</EM> ...))</SPAN>
+
+<SPAN>(during <EM>pattern</EM> <EM>endpoint-expr</EM> ...)
+  = (on (asserted <EM>pattern</EM>)
+        (react (stop-when (retracted <EM>pattern′</EM>))
+               <EM>endpoint-expr</EM> ...))</SPAN></code></pre></DIV></section>
+<section data-transition="none" class="stage-4"><DIV class="bigger"><pre><code class="scheme">(react <SPAN>(field [<EM>field-name</EM> <EM>expr</EM>] ...)</SPAN>
+       <EM>endpoint-expr</EM> ...)
+
+<EM>endpoint-expr</EM>
+  = <SPAN>(assert <EM>expr</EM>)</SPAN>
+<SPAN>  | (on (asserted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (retracted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (message <EM>pattern</EM>) <EM>expr</EM> ...)</SPAN>
+<MARK>  | (on-start <EM>expr</EM> ...)
+  | (on-stop <EM>expr</EM> ...)</MARK></code></pre><pre class="ghosted"><code class="scheme"><SPAN>(stop-when <EM>E</EM> <EM>expr</EM> ...)
+  = (on <EM>E</EM> (stop-facet (current-facet-id) <EM>expr</EM> ...))</SPAN>
+
+<SPAN>(during <EM>pattern</EM> <EM>endpoint-expr</EM> ...)
+  = (on (asserted <EM>pattern</EM>)
+        (react (stop-when (retracted <EM>pattern′</EM>))
+               <EM>endpoint-expr</EM> ...))</SPAN></code></pre></DIV></section>
+<section data-transition="none" class="stage-5"><DIV class="bigger"><pre><code class="scheme">(react <SPAN>(field [<EM>field-name</EM> <EM>expr</EM>] ...)</SPAN>
+       <EM>endpoint-expr</EM> ...)
+
+<EM>endpoint-expr</EM>
+  = <SPAN>(assert <EM>expr</EM>)</SPAN>
+<SPAN>  | (on (asserted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (retracted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (message <EM>pattern</EM>) <EM>expr</EM> ...)</SPAN>
+<SPAN>  | (on-start <EM>expr</EM> ...)
+  | (on-stop <EM>expr</EM> ...)</SPAN></code></pre><pre class="ghosted"><code class="scheme"><SPAN>(stop-when <EM>E</EM> <EM>expr</EM> ...)
+  = (on <EM>E</EM> (stop-facet (current-facet-id) <EM>expr</EM> ...))</SPAN>
+
+<SPAN>(during <EM>pattern</EM> <EM>endpoint-expr</EM> ...)
+  = (on (asserted <EM>pattern</EM>)
+        (react (stop-when (retracted <EM>pattern′</EM>))
+               <EM>endpoint-expr</EM> ...))</SPAN></code></pre></DIV></section>
+<section data-transition="none" class="stage-6"><DIV class="bigger"><pre><code class="scheme">(react <SPAN>(field [<EM>field-name</EM> <EM>expr</EM>] ...)</SPAN>
+       <EM>endpoint-expr</EM> ...)
+
+<EM>endpoint-expr</EM>
+  = <SPAN>(assert <EM>expr</EM>)</SPAN>
+<SPAN>  | (on (asserted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (retracted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (message <EM>pattern</EM>) <EM>expr</EM> ...)</SPAN>
+<SPAN>  | (on-start <EM>expr</EM> ...)
+  | (on-stop <EM>expr</EM> ...)</SPAN></code></pre><pre><code class="scheme"><SPAN>(stop-when <EM>E</EM> <EM>expr</EM> ...)
+  = (on <EM>E</EM> (stop-facet (current-facet-id) <EM>expr</EM> ...))</SPAN>
+
+<SPAN>(during <EM>pattern</EM> <EM>endpoint-expr</EM> ...)
+  = (on (asserted <EM>pattern</EM>)
+        (react (stop-when (retracted <EM>pattern′</EM>))
+               <EM>endpoint-expr</EM> ...))</SPAN></code></pre></DIV></section>
+<section data-transition="none" class="stage-7"><DIV class="bigger"><pre><code class="scheme">(react <SPAN>(field [<EM>field-name</EM> <EM>expr</EM>] ...)</SPAN>
+       <EM>endpoint-expr</EM> ...)
+
+<EM>endpoint-expr</EM>
+  = <SPAN>(assert <EM>expr</EM>)</SPAN>
+<SPAN>  | (on (asserted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (retracted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (message <EM>pattern</EM>) <EM>expr</EM> ...)</SPAN>
+<SPAN>  | (on-start <EM>expr</EM> ...)
+  | (on-stop <EM>expr</EM> ...)</SPAN></code></pre><pre><code class="scheme"><MARK>(stop-when <EM>E</EM> <EM>expr</EM> ...)
+  = (on <EM>E</EM> (stop-facet (current-facet-id) <EM>expr</EM> ...))</MARK>
+
+<SPAN>(during <EM>pattern</EM> <EM>endpoint-expr</EM> ...)
+  = (on (asserted <EM>pattern</EM>)
+        (react (stop-when (retracted <EM>pattern′</EM>))
+               <EM>endpoint-expr</EM> ...))</SPAN></code></pre></DIV></section>
+<section data-transition="none" class="stage-8"><DIV class="bigger"><pre><code class="scheme">(react <SPAN>(field [<EM>field-name</EM> <EM>expr</EM>] ...)</SPAN>
+       <EM>endpoint-expr</EM> ...)
+
+<EM>endpoint-expr</EM>
+  = <SPAN>(assert <EM>expr</EM>)</SPAN>
+<SPAN>  | (on (asserted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (retracted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (message <EM>pattern</EM>) <EM>expr</EM> ...)</SPAN>
+<SPAN>  | (on-start <EM>expr</EM> ...)
+  | (on-stop <EM>expr</EM> ...)</SPAN></code></pre><pre><code class="scheme"><SPAN>(stop-when <EM>E</EM> <EM>expr</EM> ...)
+  = (on <EM>E</EM> (stop-facet (current-facet-id) <EM>expr</EM> ...))</SPAN>
+
+<MARK>(during <EM>pattern</EM> <EM>endpoint-expr</EM> ...)
+  = (on (asserted <EM>pattern</EM>)
+        (react (stop-when (retracted <EM>pattern′</EM>))
+               <EM>endpoint-expr</EM> ...))</MARK></code></pre></DIV></section>
+<section data-transition="none" class="stage-9"><DIV class="bigger"><pre><code class="scheme">(react <SPAN>(field [<EM>field-name</EM> <EM>expr</EM>] ...)</SPAN>
+       <EM>endpoint-expr</EM> ...)
+
+<EM>endpoint-expr</EM>
+  = <SPAN>(assert <EM>expr</EM>)</SPAN>
+<SPAN>  | (on (asserted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (retracted <EM>pattern</EM>) <EM>expr</EM> ...)
+  | (on (message <EM>pattern</EM>) <EM>expr</EM> ...)</SPAN>
+<SPAN>  | (on-start <EM>expr</EM> ...)
+  | (on-stop <EM>expr</EM> ...)</SPAN></code></pre><pre><code class="scheme"><SPAN>(stop-when <EM>E</EM> <EM>expr</EM> ...)
+  = (on <EM>E</EM> (stop-facet (current-facet-id) <EM>expr</EM> ...))</SPAN>
+
+<SPAN>(during <EM>pattern</EM> <EM>endpoint-expr</EM> ...)
+  = (on (asserted <EM>pattern</EM>)
+        (react (stop-when (retracted <EM>pattern′</EM>))
+               <EM>endpoint-expr</EM> ...))</SPAN></code></pre></DIV></section></section>
+<section data-transition="none" class="stage-0 dns-example"><section data-transition="none" class="stage-0"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (<MARK>on</MARK> (<MARK>asserted</MARK> (observe (dns-entry $name _)))
+           (<MARK>react</MARK> (<MARK>stop-when</MARK> (<MARK>retracted</MARK> (observe (dns-entry ···))))
+             (assert (dns-entry "localhost" ···)))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <SPAN>(observe (dns-entry $name _))</SPAN>)
+           <SPAN>(define deadline (+ (current-inexact-milliseconds) 2000))</SPAN>
+           (react <SPAN>(stop-when (asserted (later-than deadline)))</SPAN>
+                  <SPAN>(assert (observe (dns-entry name _)))</SPAN>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-1"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (during (observe (dns-entry $name _))
+         (define addr (engage-in-internet-dns-protocol-for name))
+         (assert (dns-entry name addr))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <MARK>(observe (dns-entry $name _))</MARK>)
+           <SPAN>(define deadline (+ (current-inexact-milliseconds) 2000))</SPAN>
+           (react <SPAN>(stop-when (asserted (later-than deadline)))</SPAN>
+                  <SPAN>(assert (observe (dns-entry name _)))</SPAN>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-2"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <MARK>(asserted (dns-entry "localhost" $addr))</MARK></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (during (observe (dns-entry $name _))
+         (define addr (engage-in-internet-dns-protocol-for name))
+         (assert (dns-entry name addr))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <SPAN>(observe (dns-entry $name _))</SPAN>)
+           <MARK>(define deadline (+ (current-inexact-milliseconds) 2000))</MARK>
+           (react <SPAN>(stop-when (asserted (later-than deadline)))</SPAN>
+                  <SPAN>(assert (observe (dns-entry name _)))</SPAN>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-3"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <MARK>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></MARK>
+         <MARK>(printf "localhost is ~a\n" addr))</MARK>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (during (observe (dns-entry $name _))
+         (define addr (engage-in-internet-dns-protocol-for name))
+         (assert (dns-entry name addr))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <SPAN>(observe (dns-entry $name _))</SPAN>)
+           <SPAN>(define deadline (+ (current-inexact-milliseconds) 2000))</SPAN>
+           (react <MARK>(stop-when (asserted (later-than deadline)))</MARK>
+                  <SPAN>(assert (observe (dns-entry name _)))</SPAN>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-4"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (<MARK>on</MARK> (<MARK>asserted</MARK> (observe (dns-entry $name _)))
+           (<MARK>react</MARK> (<MARK>stop-when</MARK> (<MARK>retracted</MARK> (observe (dns-entry ···))))
+             (assert (dns-entry "localhost" ···)))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <SPAN>(observe (dns-entry $name _))</SPAN>)
+           <SPAN>(define deadline (+ (current-inexact-milliseconds) 2000))</SPAN>
+           (react <SPAN>(stop-when (asserted (later-than deadline)))</SPAN>
+                  <MARK>(assert (observe (dns-entry name _)))</MARK>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-5"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (during (observe (dns-entry $name _))
+         (define addr (engage-in-internet-dns-protocol-for name))
+         (assert (dns-entry name addr))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR class="ghosted"><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <SPAN>(observe (dns-entry $name _))</SPAN>)
+           <SPAN>(define deadline (+ (current-inexact-milliseconds) 2000))</SPAN>
+           (react <SPAN>(stop-when (asserted (later-than deadline)))</SPAN>
+                  <SPAN>(assert (observe (dns-entry name _)))</SPAN>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-6"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (during (observe (dns-entry $name _))
+         (define addr (engage-in-internet-dns-protocol-for name))
+         (assert (dns-entry name addr))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <SPAN>(observe (dns-entry $name _))</SPAN>)
+           <SPAN>(define deadline (+ (current-inexact-milliseconds) 2000))</SPAN>
+           (react <SPAN>(stop-when (asserted (later-than deadline)))</SPAN>
+                  <SPAN>(assert (observe (dns-entry name _)))</SPAN>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-7"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (during (observe (dns-entry $name _))
+         (define addr (engage-in-internet-dns-protocol-for name))
+         (assert (dns-entry name addr))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <MARK>(observe (dns-entry $name _))</MARK>)
+           <SPAN>(define deadline (+ (current-inexact-milliseconds) 2000))</SPAN>
+           (react <SPAN>(stop-when (asserted (later-than deadline)))</SPAN>
+                  <SPAN>(assert (observe (dns-entry name _)))</SPAN>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-8"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (during (observe (dns-entry $name _))
+         (define addr (engage-in-internet-dns-protocol-for name))
+         (assert (dns-entry name addr))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <SPAN>(observe (dns-entry $name _))</SPAN>)
+           <MARK>(define deadline (+ (current-inexact-milliseconds) 2000))</MARK>
+           (react <SPAN>(stop-when (asserted (later-than deadline)))</SPAN>
+                  <SPAN>(assert (observe (dns-entry name _)))</SPAN>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-9"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (during (observe (dns-entry $name _))
+         (define addr (engage-in-internet-dns-protocol-for name))
+         (assert (dns-entry name addr))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <SPAN>(observe (dns-entry $name _))</SPAN>)
+           <SPAN>(define deadline (+ (current-inexact-milliseconds) 2000))</SPAN>
+           (react <MARK>(stop-when (asserted (later-than deadline)))</MARK>
+                  <SPAN>(assert (observe (dns-entry name _)))</SPAN>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-10"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (during (observe (dns-entry $name _))
+         (define addr (engage-in-internet-dns-protocol-for name))
+         (assert (dns-entry name addr))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <SPAN>(observe (dns-entry $name _))</SPAN>)
+           <SPAN>(define deadline (+ (current-inexact-milliseconds) 2000))</SPAN>
+           (react <SPAN>(stop-when (asserted (later-than deadline)))</SPAN>
+                  <MARK>(assert (observe (dns-entry name _)))</MARK>)))</code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-11"><TABLE class="summary-table"><TR style="background-color: rgba(255,192,192,1.0);"><TD>Client</TD><TD><UL><LI>Asserts <CODE>(observe (dns-entry "localhost" _))</CODE></LI><LI>When notified of a <CODE>(dns-entry "localhost" $addr)</CODE>, prints <CODE>addr</CODE> and quits</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(255,192,192,1.0);"><code class="scheme">(spawn <SPAN>(stop-when <SPAN>(asserted (dns-entry "localhost" $addr))</SPAN></SPAN>
+         <SPAN>(printf "localhost is ~a\n" addr))</SPAN>)</code></pre></TD></TR><TR style="background-color: rgba(240,255,192,1.0);"><TD>Server</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   looks up the <CODE>addr</CODE> for <CODE>name</CODE> and
+   asserts <CODE>(dns-entry name addr)</CODE></LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(240,255,192,1.0);"><code class="scheme">(spawn (during (observe (dns-entry $name _))
+         (define addr (engage-in-internet-dns-protocol-for name))
+         (assert (dns-entry name addr))))</code></pre></TD></TR><TR style="background-color: rgba(192,192,255,1.0);"><TD>Cache</TD><TD><UL><LI>Asserts <CODE>(observe (observe (dns-entry _ _)))</CODE></LI><LI>In response to <CODE>(observe (dns-entry $name _))</CODE>,
+   asserts the same, and also <CODE>(observe (laterThan ···))</CODE></LI><LI>In response to <CODE>(laterThan ···)</CODE>,
+   removes the corresponding assertions</LI></UL></TD></TR><TR><TD colspan="2"><pre style="background-color: rgba(192,192,255,1.0);"><code class="scheme">(spawn (on (asserted <SPAN>(observe (dns-entry $name _))</SPAN>)
+           <SPAN>(define deadline (+ (current-inexact-milliseconds) 2000))</SPAN>
+           (react <SPAN>(stop-when (asserted (later-than deadline)))</SPAN>
+                  <SPAN>(assert (observe (dns-entry name _)))</SPAN>)))</code></pre></TD></TR></TABLE></section></section>
+<section data-transition="none" class="stage-0"><DIV><img src="slides/ch5-stx-programs.png" style="width: 30%;"/><img src="slides/ch5-stx-trees.png" style="width: 50%;"/></DIV><H3>Figures 16 &amp; 17, chapter 5</H3><aside class="notes"><P>The dissertation includes a stripped-back description
+    of the new language features in a very small
+    host language called <SPAN class="language-name">Syndicate/λ</SPAN></P><P>The syntax and reduction rules that explain the features
+    are in chapter 5 of the dissertation</P></aside></section>
+<section data-transition="none" class="stage-0"><DIV><img src="slides/ch5-reductions1.png" style="width: 40%;"/><img src="slides/ch5-reductions2.png" style="width: 40%;"/></DIV><H3>Figures 19 &amp; 20, chapter 5</H3></section>
+<section data-transition="none" class="stage-0"><DIV><img src="slides/ch5-judgements.png" style="width: 45%;"/></DIV><H3>Figure 23, chapter 5</H3><aside class="notes"><P>The same chapter lays out a "well-formedness" judgement,
+    which will form the heart of a soundness argument
+    that programmers can rely on.</P></aside></section>
+<section data-transition="none" class="stage-0"><H3>Roadmap</H3><OL><LI>Dataspace model and assertion tries</LI><LI>Reifying conversations</LI><LI class="highlighted">Programming experience with <SPAN class="language-name">Syndicate</SPAN></LI><LI>Evaluation</LI><LI>Conclusion &amp; future work</LI></OL></section>
+<section data-transition="none" class="stage-0"><H3><SPAN class="language-name">Syndicate/js</SPAN></H3><P>In-browser and node.js implementation</P><P>Assertions can place DOM elements on the page</P><P>DOM events generate <SPAN class="language-name">Syndicate/js</SPAN> messages</P><P>Websocket protocol connects browser to <SPAN class="language-name">Syndicate/rkt</SPAN></P></section>
+<section data-transition="none" class="stage-0"><DIV><img src="slides/pljs-todo-screenshot.png" style="width: 100%;"/></DIV></section>
+<section data-transition="none" class="stage-0"><pre style="width: 100%;"><code class="scheme">function todoListItemModel(initialId, initialTitle, initialCompleted) {
+  <SPAN>spawn</SPAN> {
+<SPAN>    field this.id = initialId;
+    field this.title = initialTitle;
+    field this.completed = initialCompleted;</SPAN>
+
+<SPAN>    stop on message deleteTodo(this.id);
+</SPAN>
+<SPAN>    assert todo(this.id, this.title, this.completed);
+</SPAN>
+<SPAN>    on message setCompleted(this.id, $v) { this.completed = v; }
+    on message setAllCompleted($v)       { this.completed = v; }
+
+    on message setTitle(this.id, $v)     { this.title = v;     }
+
+    on message clearCompletedTodos() {
+      if (this.completed) :: deleteTodo(this.id);
+    }
+</SPAN>  }
+}</code></pre><aside class="notes"><P>It's more or less a curly-brace version of the same
+     additions to the language</P></aside></section>
+<section data-transition="none" class="stage-0"><img src="slides/game-screenshot.png"/><aside class="notes"><P>And of course we built a few other reasonably large programs.</P><P>This is a 2D platform game written in <SPAN class="language-name">Syndicate/rkt</SPAN>.</P><P>Everything you see on screen is an assertion.</P></aside></section>
+<section data-transition="none" class="stage-0"><img src="slides/syndicate-gui-snapshot.png"/><aside class="notes"><P>The same is true for this windowing system.</P><P>Another nice feature is the window-list on the bottom.
+        Both that and the windows themselves are from
+        the same assertion.</P><P>Good fault-tolerance properties.</P></aside></section>
+<section data-transition="none" class="stage-0"><UL><LI>IRC Server</LI><LI>TCP/IP Stack</LI><LI>Collaborative text editor server</LI><LI>Broker: embeds <SPAN class="language-name">Syndicate/js</SPAN> in <SPAN class="language-name">Syndicate/rkt</SPAN></LI><LI>Web-based chat application</LI><LI>Many, many, many smaller examples</LI></UL><P><I><a href="http://syndicate-lang.org/">http://syndicate-lang.org/</a></I></P></section>
+<section data-transition="none" class="stage-0"><H3>Roadmap</H3><OL><LI>Dataspace model and assertion tries</LI><LI>Reifying conversations</LI><LI>Programming experience with <SPAN class="language-name">Syndicate</SPAN></LI><LI class="highlighted">Evaluation</LI><LI>Conclusion &amp; future work</LI></OL></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><H4>How should we evaluate a language design idea?</H4><TABLE class="summary-table"><TR><TD class="ghosted">Quantitatively?</TD><TD><SPAN class="ghosted"><SPAN class="cross-mark">✗</SPAN> Benchmark suites<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="cross-mark">✗</SPAN> Error rates<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="cross-mark">✗</SPAN> Programmer productivity<BR/></SPAN></TD></TR><TR><TD class="ghosted">Qualitatively</TD><TD><SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Simplification of programs<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Asymptotic performance<BR/></SPAN></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-1"><H4>How should we evaluate a language design idea?</H4><TABLE class="summary-table"><TR><TD>Quantitatively?</TD><TD><SPAN class="ghosted"><SPAN class="cross-mark">✗</SPAN> Benchmark suites<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="cross-mark">✗</SPAN> Error rates<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="cross-mark">✗</SPAN> Programmer productivity<BR/></SPAN></TD></TR><TR><TD class="ghosted">Qualitatively</TD><TD><SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Simplification of programs<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Asymptotic performance<BR/></SPAN></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-2"><H4>How should we evaluate a language design idea?</H4><TABLE class="summary-table"><TR><TD>Quantitatively?</TD><TD><SPAN><SPAN class="cross-mark">✗</SPAN> Benchmark suites<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="cross-mark">✗</SPAN> Error rates<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="cross-mark">✗</SPAN> Programmer productivity<BR/></SPAN></TD></TR><TR><TD class="ghosted">Qualitatively</TD><TD><SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Simplification of programs<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Asymptotic performance<BR/></SPAN></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-3"><H4>How should we evaluate a language design idea?</H4><TABLE class="summary-table"><TR><TD>Quantitatively?</TD><TD><SPAN><SPAN class="cross-mark">✗</SPAN> Benchmark suites<BR/></SPAN>
+<SPAN><SPAN class="cross-mark">✗</SPAN> Error rates<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="cross-mark">✗</SPAN> Programmer productivity<BR/></SPAN></TD></TR><TR><TD class="ghosted">Qualitatively</TD><TD><SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Simplification of programs<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Asymptotic performance<BR/></SPAN></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-4"><H4>How should we evaluate a language design idea?</H4><TABLE class="summary-table"><TR><TD>Quantitatively?</TD><TD><SPAN><SPAN class="cross-mark">✗</SPAN> Benchmark suites<BR/></SPAN>
+<SPAN><SPAN class="cross-mark">✗</SPAN> Error rates<BR/></SPAN>
+<SPAN><SPAN class="cross-mark">✗</SPAN> Programmer productivity<BR/></SPAN></TD></TR><TR><TD class="ghosted">Qualitatively</TD><TD><SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Simplification of programs<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Asymptotic performance<BR/></SPAN></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-5"><H4>How should we evaluate a language design idea?</H4><TABLE class="summary-table"><TR><TD>Quantitatively?</TD><TD><SPAN><SPAN class="cross-mark">✗</SPAN> Benchmark suites<BR/></SPAN>
+<SPAN><SPAN class="cross-mark">✗</SPAN> Error rates<BR/></SPAN>
+<SPAN><SPAN class="cross-mark">✗</SPAN> Programmer productivity<BR/></SPAN></TD></TR><TR><TD>Qualitatively</TD><TD><SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Simplification of programs<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Asymptotic performance<BR/></SPAN></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-6"><H4>How should we evaluate a language design idea?</H4><TABLE class="summary-table"><TR><TD>Quantitatively?</TD><TD><SPAN><SPAN class="cross-mark">✗</SPAN> Benchmark suites<BR/></SPAN>
+<SPAN><SPAN class="cross-mark">✗</SPAN> Error rates<BR/></SPAN>
+<SPAN><SPAN class="cross-mark">✗</SPAN> Programmer productivity<BR/></SPAN></TD></TR><TR><TD>Qualitatively</TD><TD><SPAN><SPAN class="check-mark">✓</SPAN> Simplification of programs<BR/></SPAN>
+<SPAN class="ghosted"><SPAN class="check-mark">✓</SPAN> Asymptotic performance<BR/></SPAN></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-7"><H4>How should we evaluate a language design idea?</H4><TABLE class="summary-table"><TR><TD>Quantitatively?</TD><TD><SPAN><SPAN class="cross-mark">✗</SPAN> Benchmark suites<BR/></SPAN>
+<SPAN><SPAN class="cross-mark">✗</SPAN> Error rates<BR/></SPAN>
+<SPAN><SPAN class="cross-mark">✗</SPAN> Programmer productivity<BR/></SPAN></TD></TR><TR><TD>Qualitatively</TD><TD><SPAN><SPAN class="check-mark">✓</SPAN> Simplification of programs<BR/></SPAN>
+<SPAN><SPAN class="check-mark">✓</SPAN> Asymptotic performance<BR/></SPAN></TD></TR></TABLE></section></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><H3>Patterns</H3><DIV class="switch-container" style="height: 4em;"><P>Simplify by eliminating patterns.</P></DIV></section>
+<section data-transition="none" class="stage-1"><H3>Patterns</H3><DIV class="switch-container" style="height: 4em;"><DIV><P>Programming Pattern [Felleisen 1991]</P><P>Design Pattern [Gamma et al. 1994]</P></DIV></DIV></section></section>
+<section data-transition="none" class="stage-0"><P>Informal → Formal → Invisible</P><P>[Norvig 1996]</P></section>
+<section data-transition="none" class="stage-0"><OL><LI>Event Broadcast (encoding)</LI><LI>The "Observer" Pattern [Gamma et al. 1994]</LI><LI>State Replication Pattern<BR/><BR/></LI><LI>The "State" Pattern [Gamma et al. 1994]<BR/><BR/></LI><LI>The "Cancellation" Pattern [Russell et al. 2016]</LI></OL></section>
+<section data-transition="none" class="stage-0 state-replication-pattern"><H3>State Replication</H3><TABLE><TR><TD></TD><TD>Event broadcasting</TD><TD>Observer pattern</TD><TD>State replication</TD></TR><TR><TH>Smalltalk</TH><TD>informal/invisible</TD><TD>formal</TD><TD>informal</TD></TR><TR><TH>Ruby</TH><TD>informal/invisible</TD><TD>formal</TD><TD>informal</TD></TR><TR><TH>Java</TH><TD>informal/invisible</TD><TD>informal</TD><TD>informal</TD></TR><TR><TH>Erlang/OTP</TH><TD>informal/invisible</TD><TD>informal</TD><TD>informal</TD></TR><TR><TH><SPAN class="language-name">Syndicate</SPAN></TH><TD class="reddish">invisible</TD><TD class="reddish">invisible</TD><TD class="reddish">invisible</TD></TR></TABLE></section>
+<section data-transition="none" class="stage-0"><H3>"State" Pattern</H3><TABLE><TR><TH>Java</TH><TD>informal</TD></TR><TR><TH><SPAN class="language-name">Syndicate</SPAN></TH><TD class="reddish">invisible</TD></TR></TABLE></section>
+<section data-transition="none" class="stage-0"><H3>"Cancellation" Pattern</H3><TABLE><TR><TH>JavaScript</TH><TD>informal</TD></TR><TR><TH><SPAN class="language-name">Syndicate</SPAN></TH><TD class="reddish">invisible</TD></TR></TABLE></section>
+<section data-transition="none" class="stage-0"><pre><code class="scheme">(struct service-a (request response))
+(struct service-b (request response))
+
+(spawn (during (service-a 'request-from-a $response)
+         (on-start (printf "Response: ~v\n" response))))
+
+(spawn (during (observe (service-a $req-a _))
+         (during (service-b 'request-from-b $resp-b)
+           (assert (service-a req-a (make-answer resp-b))))))</code></pre></section>
+<section data-transition="none" class="stage-0 asymptotic-performance"><H3>Asymptotic performance</H3><P class="green">Message routing &amp; delivery, sec/event vs k</P><TABLE class="no-dividers"><TR><TD><img src="Figures/performance/cost-per-msg.svg"/><BR/>Unicast: Õ(1)</TD><TD><img src="Figures/performance/cost-per-broadcast.svg"/><BR/>Broadcast: Õ(1/k + 1)</TD></TR></TABLE><aside class="notes"><P>Message-routing and -delivery as expected</P></aside></section>
+<section data-transition="none" class="stage-0 asymptotic-performance"><H3>Asymptotic performance</H3><P class="green">Assertion set update cost, sec/event vs k</P><TABLE class="no-dividers"><TR><TD><img src="Figures/performance/cost-per-scn-1.svg"/><BR/>k-independent: Õ(1)</TD><TD><img src="Figures/performance/cost-per-scn-2.svg"/><BR/>k-dependent: Õ(1)</TD></TR></TABLE><aside class="notes"><P>Complex space</P><P>A few extreme points in this space: no surprises</P></aside></section>
+<section data-transition="none" class="stage-0 asymptotic-performance"><H3>Asymptotic performance</H3><P class="green">TCP echo server, sec/conn vs k</P><TABLE class="no-dividers"><TR><TD colspan="2"><img src="Figures/performance/echo-server-cost.svg"/><BR/>Marginal cost of additional connection: Õ(1)</TD></TR></TABLE></section>
+<section data-transition="none" class="stage-0"><H3>Roadmap</H3><OL><LI>Dataspace model and assertion tries</LI><LI>Reifying conversations</LI><LI>Programming experience with <SPAN class="language-name">Syndicate</SPAN></LI><LI>Evaluation</LI><LI class="highlighted">Conclusion &amp; future work</LI></OL></section>
+<section class="thesis-expanded stage-0" data-transition="none"><H3><SPAN><SPAN class="language-name">Syndicate</SPAN> provides a...</SPAN></H3><TABLE class="no-dividers fullwidth"><TR><TD>new</TD><TD>→</TD><TD>design landscape</TD></TR><TR><TD>effective</TD><TD>→</TD><TD>evaluation</TD></TR><TR><TD>realizable</TD><TD>→</TD><TD><SPAN>prototypes, tries</SPAN></TD></TR><TR><TD>linguistic</TD><TD>→</TD><TD>reified conversations</TD></TR><TR><TD>mechanism for sharing state</TD><TD>→</TD><TD>dataspace model</TD></TR></TABLE><P>in a concurrent setting.</P></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><H3>Future Work</H3><UL><LI>Enhancements to the formal models<BR/><SMALL>types; names; grouping &amp; relaying; formal properties</SMALL></LI><LI>System model<BR/><SMALL>performance; tool support; generic protocols; process management;<BR/>stdio; contracts; security; persistence; polyglot</SMALL></LI><LI>Distributed systems<BR/><SMALL>unpredictable latency &amp; scheduling; message loss; subnets</SMALL></LI></UL><DIV class="ghosted"><H3>Thank you!</H3><SMALL>Committee: Thank You for Signing my Dissertation! :-)</SMALL></DIV></section>
+<section data-transition="none" class="stage-1"><H3>Future Work</H3><UL><LI>Enhancements to the formal models<BR/><SMALL>types; names; grouping &amp; relaying; formal properties</SMALL></LI><LI>System model<BR/><SMALL>performance; tool support; generic protocols; process management;<BR/>stdio; contracts; security; persistence; polyglot</SMALL></LI><LI>Distributed systems<BR/><SMALL>unpredictable latency &amp; scheduling; message loss; subnets</SMALL></LI></UL><DIV><H3>Thank you!</H3><SMALL>Committee: Thank You for Signing my Dissertation! :-)</SMALL></DIV></section></section>
+<section data-transition="none" class="stage-0"><H3>Backup</H3></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><TABLE class="summary-table"><TR><TD class="medium">New expressions:</TD><TD><pre style="width: 100%;"><code class="scheme"><SPAN>(spawn <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(spawn* <EM>expr</EM> ...)</SPAN>
+<SPAN>(dataspace <EM>expr</EM> ...)</SPAN>
+<SPAN>(react <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(stop-facet <EM>facet-id-expr</EM> <EM>expr</EM> ...)</SPAN>
+<SPAN>(current-facet-id)</SPAN>
+<SPAN>(send! <EM>expr</EM>)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field access:</TD><TD><pre><code class="scheme"><SPAN>(fieldname)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field update:</TD><TD><pre><code class="scheme"><SPAN>(fieldname <EM>expr</EM>)</SPAN></code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-1"><TABLE class="summary-table"><TR><TD class="medium">New expressions:</TD><TD><pre style="width: 100%;"><code class="scheme"><MARK>(spawn <EM>endpoint-expr</EM> ...)</MARK>
+<MARK>(spawn* <EM>expr</EM> ...)</MARK>
+<SPAN>(dataspace <EM>expr</EM> ...)</SPAN>
+<SPAN>(react <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(stop-facet <EM>facet-id-expr</EM> <EM>expr</EM> ...)</SPAN>
+<SPAN>(current-facet-id)</SPAN>
+<SPAN>(send! <EM>expr</EM>)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field access:</TD><TD><pre><code class="scheme"><SPAN>(fieldname)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field update:</TD><TD><pre><code class="scheme"><SPAN>(fieldname <EM>expr</EM>)</SPAN></code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-2"><TABLE class="summary-table"><TR><TD class="medium">New expressions:</TD><TD><pre style="width: 100%;"><code class="scheme"><SPAN>(spawn <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(spawn* <EM>expr</EM> ...)</SPAN>
+<MARK>(dataspace <EM>expr</EM> ...)</MARK>
+<SPAN>(react <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(stop-facet <EM>facet-id-expr</EM> <EM>expr</EM> ...)</SPAN>
+<SPAN>(current-facet-id)</SPAN>
+<SPAN>(send! <EM>expr</EM>)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field access:</TD><TD><pre><code class="scheme"><SPAN>(fieldname)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field update:</TD><TD><pre><code class="scheme"><SPAN>(fieldname <EM>expr</EM>)</SPAN></code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-3"><TABLE class="summary-table"><TR><TD class="medium">New expressions:</TD><TD><pre style="width: 100%;"><code class="scheme"><SPAN>(spawn <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(spawn* <EM>expr</EM> ...)</SPAN>
+<SPAN>(dataspace <EM>expr</EM> ...)</SPAN>
+<MARK>(react <EM>endpoint-expr</EM> ...)</MARK>
+<SPAN>(stop-facet <EM>facet-id-expr</EM> <EM>expr</EM> ...)</SPAN>
+<SPAN>(current-facet-id)</SPAN>
+<SPAN>(send! <EM>expr</EM>)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field access:</TD><TD><pre><code class="scheme"><SPAN>(fieldname)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field update:</TD><TD><pre><code class="scheme"><SPAN>(fieldname <EM>expr</EM>)</SPAN></code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-4"><TABLE class="summary-table"><TR><TD class="medium">New expressions:</TD><TD><pre style="width: 100%;"><code class="scheme"><SPAN>(spawn <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(spawn* <EM>expr</EM> ...)</SPAN>
+<SPAN>(dataspace <EM>expr</EM> ...)</SPAN>
+<SPAN>(react <EM>endpoint-expr</EM> ...)</SPAN>
+<MARK>(stop-facet <EM>facet-id-expr</EM> <EM>expr</EM> ...)</MARK>
+<MARK>(current-facet-id)</MARK>
+<SPAN>(send! <EM>expr</EM>)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field access:</TD><TD><pre><code class="scheme"><SPAN>(fieldname)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field update:</TD><TD><pre><code class="scheme"><SPAN>(fieldname <EM>expr</EM>)</SPAN></code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-5"><TABLE class="summary-table"><TR><TD class="medium">New expressions:</TD><TD><pre style="width: 100%;"><code class="scheme"><SPAN>(spawn <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(spawn* <EM>expr</EM> ...)</SPAN>
+<SPAN>(dataspace <EM>expr</EM> ...)</SPAN>
+<SPAN>(react <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(stop-facet <EM>facet-id-expr</EM> <EM>expr</EM> ...)</SPAN>
+<SPAN>(current-facet-id)</SPAN>
+<MARK>(send! <EM>expr</EM>)</MARK></code></pre></TD></TR><TR><TD class="medium">Field access:</TD><TD><pre><code class="scheme"><SPAN>(fieldname)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field update:</TD><TD><pre><code class="scheme"><SPAN>(fieldname <EM>expr</EM>)</SPAN></code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-6"><TABLE class="summary-table"><TR><TD class="medium">New expressions:</TD><TD><pre style="width: 100%;"><code class="scheme"><SPAN>(spawn <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(spawn* <EM>expr</EM> ...)</SPAN>
+<SPAN>(dataspace <EM>expr</EM> ...)</SPAN>
+<SPAN>(react <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(stop-facet <EM>facet-id-expr</EM> <EM>expr</EM> ...)</SPAN>
+<SPAN>(current-facet-id)</SPAN>
+<SPAN>(send! <EM>expr</EM>)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field access:</TD><TD><pre><code class="scheme"><MARK>(fieldname)</MARK></code></pre></TD></TR><TR><TD class="medium">Field update:</TD><TD><pre><code class="scheme"><SPAN>(fieldname <EM>expr</EM>)</SPAN></code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-7"><TABLE class="summary-table"><TR><TD class="medium">New expressions:</TD><TD><pre style="width: 100%;"><code class="scheme"><SPAN>(spawn <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(spawn* <EM>expr</EM> ...)</SPAN>
+<SPAN>(dataspace <EM>expr</EM> ...)</SPAN>
+<SPAN>(react <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(stop-facet <EM>facet-id-expr</EM> <EM>expr</EM> ...)</SPAN>
+<SPAN>(current-facet-id)</SPAN>
+<SPAN>(send! <EM>expr</EM>)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field access:</TD><TD><pre><code class="scheme"><SPAN>(fieldname)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field update:</TD><TD><pre><code class="scheme"><MARK>(fieldname <EM>expr</EM>)</MARK></code></pre></TD></TR></TABLE></section>
+<section data-transition="none" class="stage-8"><TABLE class="summary-table"><TR><TD class="medium">New expressions:</TD><TD><pre style="width: 100%;"><code class="scheme"><SPAN>(spawn <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(spawn* <EM>expr</EM> ...)</SPAN>
+<SPAN>(dataspace <EM>expr</EM> ...)</SPAN>
+<SPAN>(react <EM>endpoint-expr</EM> ...)</SPAN>
+<SPAN>(stop-facet <EM>facet-id-expr</EM> <EM>expr</EM> ...)</SPAN>
+<SPAN>(current-facet-id)</SPAN>
+<SPAN>(send! <EM>expr</EM>)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field access:</TD><TD><pre><code class="scheme"><SPAN>(fieldname)</SPAN></code></pre></TD></TR><TR><TD class="medium">Field update:</TD><TD><pre><code class="scheme"><SPAN>(fieldname <EM>expr</EM>)</SPAN></code></pre></TD></TR></TABLE></section></section>
+<section data-transition="none" class="stage-0"><section data-transition="none" class="stage-0"><pre style="width: 65%;"><code class="scheme"><SPAN>(struct set-box (new-value))
+(struct box-state (value))</SPAN>
+
+(spawn <SPAN>(field [current-value 0])</SPAN>
+       <SPAN><SPAN>(assert (box-state (current-value)))</SPAN></SPAN>
+       (on <SPAN>(message (set-box $new-value))</SPAN>
+           <SPAN>(current-value new-value)</SPAN>))
+
+(spawn (on <SPAN>(asserted (box-state $v))</SPAN>
+           <SPAN>(send! (set-box (+ v 1)))</SPAN>))</code></pre></section>
+<section data-transition="none" class="stage-1"><pre style="width: 65%;"><code class="scheme"><MARK>(struct set-box (new-value))
+(struct box-state (value))</MARK>
+
+(spawn <SPAN>(field [current-value 0])</SPAN>
+       <SPAN><SPAN>(assert (box-state (current-value)))</SPAN></SPAN>
+       (on <SPAN>(message (set-box $new-value))</SPAN>
+           <SPAN>(current-value new-value)</SPAN>))
+
+(spawn (on <SPAN>(asserted (box-state $v))</SPAN>
+           <SPAN>(send! (set-box (+ v 1)))</SPAN>))</code></pre></section>
+<section data-transition="none" class="stage-2"><pre style="width: 65%;"><code class="scheme"><SPAN>(struct set-box (new-value))
+(struct box-state (value))</SPAN>
+
+(spawn <SPAN>(field [current-value 0])</SPAN>
+       <SPAN><SPAN>(assert (box-state (current-value)))</SPAN></SPAN>
+       (on <SPAN>(message (set-box $new-value))</SPAN>
+           <SPAN>(current-value new-value)</SPAN>))
+
+(spawn (on <SPAN>(asserted (box-state $v))</SPAN>
+           <SPAN>(send! (set-box (+ v 1)))</SPAN>))</code></pre></section>
+<section data-transition="none" class="stage-3"><pre style="width: 65%;"><code class="scheme"><SPAN>(struct set-box (new-value))
+(struct box-state (value))</SPAN>
+
+(spawn <MARK>(field [current-value 0])</MARK>
+       <SPAN><SPAN>(assert (box-state (current-value)))</SPAN></SPAN>
+       (on <SPAN>(message (set-box $new-value))</SPAN>
+           <SPAN>(current-value new-value)</SPAN>))
+
+(spawn (on <SPAN>(asserted (box-state $v))</SPAN>
+           <SPAN>(send! (set-box (+ v 1)))</SPAN>))</code></pre></section>
+<section data-transition="none" class="stage-4"><pre style="width: 65%;"><code class="scheme"><SPAN>(struct set-box (new-value))
+(struct box-state (value))</SPAN>
+
+(spawn <SPAN>(field [current-value 0])</SPAN>
+       <MARK><SPAN>(assert (box-state (current-value)))</SPAN></MARK>
+       (on <SPAN>(message (set-box $new-value))</SPAN>
+           <SPAN>(current-value new-value)</SPAN>))
+
+(spawn (on <SPAN>(asserted (box-state $v))</SPAN>
+           <SPAN>(send! (set-box (+ v 1)))</SPAN>))</code></pre></section>
+<section data-transition="none" class="stage-5"><pre style="width: 65%;"><code class="scheme"><SPAN>(struct set-box (new-value))
+(struct box-state (value))</SPAN>
+
+(spawn <SPAN>(field [current-value 0])</SPAN>
+       <SPAN><SPAN>(assert (box-state (current-value)))</SPAN></SPAN>
+       (on <MARK>(message (set-box $new-value))</MARK>
+           <SPAN>(current-value new-value)</SPAN>))
+
+(spawn (on <SPAN>(asserted (box-state $v))</SPAN>
+           <SPAN>(send! (set-box (+ v 1)))</SPAN>))</code></pre></section>
+<section data-transition="none" class="stage-6"><pre style="width: 65%;"><code class="scheme"><SPAN>(struct set-box (new-value))
+(struct box-state (value))</SPAN>
+
+(spawn <SPAN>(field [current-value 0])</SPAN>
+       <SPAN><MARK>(assert (box-state (current-value)))</MARK></SPAN>
+       (on <SPAN>(message (set-box $new-value))</SPAN>
+           <MARK>(current-value new-value)</MARK>))
+
+(spawn (on <SPAN>(asserted (box-state $v))</SPAN>
+           <SPAN>(send! (set-box (+ v 1)))</SPAN>))</code></pre></section>
+<section data-transition="none" class="stage-7"><pre style="width: 65%;"><code class="scheme"><SPAN>(struct set-box (new-value))
+(struct box-state (value))</SPAN>
+
+(spawn <SPAN>(field [current-value 0])</SPAN>
+       <SPAN><SPAN>(assert (box-state (current-value)))</SPAN></SPAN>
+       (on <SPAN>(message (set-box $new-value))</SPAN>
+           <SPAN>(current-value new-value)</SPAN>))
+
+(spawn (on <SPAN>(asserted (box-state $v))</SPAN>
+           <SPAN>(send! (set-box (+ v 1)))</SPAN>))</code></pre></section>
+<section data-transition="none" class="stage-8"><pre style="width: 65%;"><code class="scheme"><SPAN>(struct set-box (new-value))
+(struct box-state (value))</SPAN>
+
+(spawn <SPAN>(field [current-value 0])</SPAN>
+       <SPAN><SPAN>(assert (box-state (current-value)))</SPAN></SPAN>
+       (on <SPAN>(message (set-box $new-value))</SPAN>
+           <SPAN>(current-value new-value)</SPAN>))
+
+(spawn (on <MARK>(asserted (box-state $v))</MARK>
+           <SPAN>(send! (set-box (+ v 1)))</SPAN>))</code></pre></section>
+<section data-transition="none" class="stage-9"><pre style="width: 65%;"><code class="scheme"><SPAN>(struct set-box (new-value))
+(struct box-state (value))</SPAN>
+
+(spawn <SPAN>(field [current-value 0])</SPAN>
+       <SPAN><SPAN>(assert (box-state (current-value)))</SPAN></SPAN>
+       (on <SPAN>(message (set-box $new-value))</SPAN>
+           <SPAN>(current-value new-value)</SPAN>))
+
+(spawn (on <SPAN>(asserted (box-state $v))</SPAN>
+           <MARK>(send! (set-box (+ v 1)))</MARK>))</code></pre></section>
+<section data-transition="none" class="stage-10"><pre style="width: 65%;"><code class="scheme"><SPAN>(struct set-box (new-value))
+(struct box-state (value))</SPAN>
+
+(spawn <SPAN>(field [current-value 0])</SPAN>
+       <SPAN><SPAN>(assert (box-state (current-value)))</SPAN></SPAN>
+       (on <SPAN>(message (set-box $new-value))</SPAN>
+           <SPAN>(current-value new-value)</SPAN>))
+
+(spawn (on <SPAN>(asserted (box-state $v))</SPAN>
+           <SPAN>(send! (set-box (+ v 1)))</SPAN>))</code></pre></section></section></div>
+</div><script src="reveal.js-3.6.0/lib/js/head.min.js"></script><script src="reveal.js-3.6.0/js/reveal.js"></script><script src="d3.v4.min.js"></script><script src="conversation-animation.js"></script><script>Reveal.initialize({"transition":"none","dependencies":[{"src":"reveal.js-3.6.0/plugin/markdown/marked.js"},{"src":"reveal.js-3.6.0/plugin/markdown/markdown.js"},{"src":"reveal.js-3.6.0/plugin/notes/notes.js"}],"controlsTutorial":false,"slideNumber":true,"history":true,"controls":false});</script></body></html>

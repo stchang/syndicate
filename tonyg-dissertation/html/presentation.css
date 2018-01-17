@@ -1,0 +1,416 @@
+@charset "UTF-8";
+@import url(fonts/texgyrepagella.css);
+/*********************************************
+ * GLOBAL STYLES
+ *********************************************/
+body {
+  background: #fff;
+  background-color: #fff; }
+
+.reveal {
+  font-family: "TeXGyrePagella", "Palatino", "Palatino Linotype", "Palatino LT STD", serif;
+  font-size: 40px;
+  font-weight: normal;
+  color: black; }
+
+::selection {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.99);
+  text-shadow: none; }
+
+::-moz-selection {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.99);
+  text-shadow: none; }
+
+.reveal .slides > section,
+.reveal .slides > section > section {
+  line-height: 1.3;
+  font-weight: inherit; }
+
+/*********************************************
+ * HEADERS
+ *********************************************/
+.reveal h1,
+.reveal h2,
+.reveal h3,
+.reveal h4,
+.reveal h5,
+.reveal h6 {
+  margin: 20px 0 20px 0;
+  color: #ae2230;
+  font-family: "TeXGyrePagella", "Palatino", "Palatino Linotype", "Palatino LT STD", serif;
+  font-weight: normal;
+  line-height: 1.2;
+  letter-spacing: normal;
+  text-transform: none;
+  text-shadow: none;
+  word-wrap: break-word; }
+
+.reveal h1 {
+  font-size: 3.77em; }
+
+.reveal h2 {
+  font-size: 2.11em; }
+
+.reveal h3 {
+  font-size: 1.55em; }
+
+.reveal h4 {
+  font-size: 1em; }
+
+.reveal h1 {
+  text-shadow: none; }
+
+/*********************************************
+ * OTHER
+ *********************************************/
+.reveal p {
+  margin: 20px 0;
+  line-height: 1.3; }
+
+/* Ensure certain elements are never larger than the slide itself */
+.reveal img,
+.reveal video,
+.reveal iframe {
+  max-width: 95%;
+  max-height: 95%; }
+
+.reveal strong,
+.reveal b {
+  font-weight: bold; }
+
+.reveal em {
+  font-style: italic; }
+
+.reveal ol,
+.reveal dl,
+.reveal ul {
+  display: inline-block;
+  text-align: left;
+  margin: 0 0 0 1em; }
+
+.reveal ol {
+  list-style-type: decimal; }
+
+.reveal ul {
+  list-style-type: disc; }
+
+.reveal ul ul {
+  list-style-type: square; }
+
+.reveal ul ul ul {
+  list-style-type: circle; }
+
+.reveal ul ul,
+.reveal ul ol,
+.reveal ol ol,
+.reveal ol ul {
+  display: block;
+  margin-left: 40px; }
+
+.reveal dt {
+  font-weight: bold; }
+
+.reveal dd {
+  margin-left: 40px; }
+
+.reveal blockquote {
+  display: block;
+  position: relative;
+  width: 70%;
+  margin: 20px auto;
+  padding: 5px;
+  font-style: italic;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: 0px 0px 2px rgba(0, 0, 0, 0.2); }
+
+.reveal blockquote p:first-child,
+.reveal blockquote p:last-child {
+  display: inline-block; }
+
+.reveal q {
+  font-style: italic; }
+
+.reveal pre {
+  display: block;
+  position: relative;
+  width: 90%;
+  margin: 20px auto;
+  text-align: left;
+  font-size: 0.55em;
+  font-family: monospace;
+  line-height: 1.2em;
+  word-wrap: break-word;
+  box-shadow: 0px 0px 6px rgba(0, 0, 0, 0.3); }
+
+.reveal code {
+  font-family: monospace;
+  text-transform: none; }
+
+.reveal pre code {
+  display: block;
+  padding: 5px;
+  overflow: auto;
+  max-height: 400px;
+  word-wrap: normal; }
+
+.reveal table {
+  margin: auto;
+  border-collapse: collapse;
+  border-spacing: 0; }
+
+.reveal table th {
+  font-weight: bold; }
+
+.reveal table th,
+.reveal table td {
+  text-align: left;
+  padding: 0.2em 0.5em 0.2em 0.5em;
+  border-bottom: 1px solid; }
+
+.reveal table th[align="center"],
+.reveal table td[align="center"] {
+  text-align: center; }
+
+.reveal table th[align="right"],
+.reveal table td[align="right"] {
+  text-align: right; }
+
+.reveal table tbody tr:last-child th,
+.reveal table tbody tr:last-child td {
+  border-bottom: none; }
+
+.reveal sup {
+  vertical-align: super; }
+
+.reveal sub {
+  vertical-align: sub; }
+
+.reveal small {
+  display: inline-block;
+  font-size: 0.6em;
+  line-height: 1.2em;
+  vertical-align: top; }
+
+.reveal small * {
+  vertical-align: top; }
+
+/*********************************************
+ * LINKS
+ *********************************************/
+.reveal a {
+  color: #176fc1;
+  text-decoration: none;
+  -webkit-transition: color .15s ease;
+  -moz-transition: color .15s ease;
+  transition: color .15s ease; }
+
+.reveal a:hover {
+  color: #53a2eb;
+  text-shadow: none;
+  border: none; }
+
+.reveal .roll span:after {
+  color: #fff;
+  background: #0f487d; }
+
+/*********************************************
+ * IMAGES
+ *********************************************/
+.reveal section img {
+  margin: 15px 0px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 4px solid black;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.15); }
+
+.reveal section img.plain {
+  border: 0;
+  box-shadow: none; }
+
+.reveal a img {
+  -webkit-transition: all .15s linear;
+  -moz-transition: all .15s linear;
+  transition: all .15s linear; }
+
+.reveal a:hover img {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: #176fc1;
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.55); }
+
+/*********************************************
+ * NAVIGATION CONTROLS
+ *********************************************/
+.reveal .controls {
+  color: #176fc1; }
+
+/*********************************************
+ * PROGRESS BAR
+ *********************************************/
+.reveal .progress {
+  background: rgba(0, 0, 0, 0.2);
+  color: #176fc1; }
+
+.reveal .progress span {
+  -webkit-transition: width 800ms cubic-bezier(0.26, 0.86, 0.44, 0.985);
+  -moz-transition: width 800ms cubic-bezier(0.26, 0.86, 0.44, 0.985);
+  transition: width 800ms cubic-bezier(0.26, 0.86, 0.44, 0.985); }
+
+body {
+  background: #ccc; }
+
+/*---------------------------------------------------------------------------*/
+.reveal {
+  /* Specific slide overrides */ }
+  .reveal h1, .reveal h2, .reveal h3, .reveal h4, .reveal h5, .reveal h6 {
+    font-weight: 400;
+    font-style: italic; }
+  .reveal h2 {
+    padding-bottom: 0.3em;
+    border-bottom: solid #ae2230 2px; }
+  .reveal .slides {
+    background: #fff; }
+  .reveal .language-name {
+    font-variant: small-caps;
+    font-style: normal; }
+  .reveal .small-caps {
+    font-variant: small-caps; }
+  .reveal .all-small-caps {
+    font-variant: all-small-caps; }
+  .reveal .medium {
+    font-size: 1.8rem; }
+  .reveal .bigger {
+    font-size: 120%; }
+  .reveal .thesisstatement {
+    display: inline-block;
+    border: solid black 1pt;
+    padding: 1em 2em;
+    max-width: 60%; }
+  .reveal div.left {
+    text-align: left;
+    margin: 0 1em; }
+  .reveal .no-dividers td, .reveal .no-dividers th {
+    border: none; }
+  .reveal table td {
+    vertical-align: top; }
+  .reveal table th {
+    text-align: center; }
+  .reveal table.fullwidth {
+    padding: 0 10px;
+    width: 100%; }
+  .reveal table.summary-table tr td:first-child {
+    text-align: right; }
+  .reveal table.summary-table tr th {
+    text-align: right;
+    color: #ae2230;
+    font-style: italic;
+    font-weight: normal; }
+  .reveal table.summary-table td, .reveal table.summary-table th {
+    border: none; }
+  .reveal td.smaller {
+    font-size: 70%;
+    vertical-align: middle; }
+  .reveal td > pre {
+    margin: 0; }
+  .reveal .ghosted {
+    opacity: 0; }
+  .reveal .greyout {
+    opacity: 0.2; }
+  .reveal .highlighted {
+    background: yellow;
+    padding: 0.1em;
+    margin: -0.1em;
+    border-radius: 0.6em;
+    box-shadow: 0px 0px 0.6em yellow; }
+  .reveal ul li {
+    list-style-type: "–  "; }
+  .reveal ul.no-list-markers > li {
+    list-style-type: none; }
+  .reveal ul {
+    margin-left: 1em !important; }
+  .reveal .green {
+    color: green; }
+  .reveal .reddish {
+    color: #ae2230; }
+  .reveal section img {
+    border: none;
+    box-shadow: none; }
+  .reveal .check-mark {
+    color: green;
+    display: inline-block;
+    width: 0.6em; }
+  .reveal .cross-mark {
+    color: red;
+    display: inline-block;
+    width: 0.6em; }
+  .reveal section.unpredictability h3 {
+    background: #ae2230;
+    color: white;
+    font-style: normal;
+    padding: 0.6em; }
+  .reveal section.thesis-expanded td, .reveal section.thesis-expanded p {
+    font-size: 90%; }
+  .reveal section.dns-example table {
+    font-size: 50%; }
+  .reveal section.dns-example pre {
+    margin: 0 0 0.3em 0;
+    width: inherit; }
+    .reveal section.dns-example pre code {
+      overflow: hidden;
+      font-size: 200%;
+      line-height: 1.1em; }
+  .reveal section.conversation-animation .links line {
+    stroke: #999;
+    stroke-opacity: 0.6; }
+  .reveal section.conversation-animation .nodes circle {
+    stroke: #fff;
+    stroke-width: 1.5px; }
+  .reveal section.conversation-animation text {
+    pointer-events: none; }
+  .reveal section.conversation-animation .assertion text {
+    font: 20px monospace; }
+  .reveal section.conversation-animation .process text {
+    font: 24px monospace; }
+  .reveal section.state-replication-pattern table {
+    font-size: 66%; }
+  .reveal section.asymptotic-performance td {
+    text-align: center; }
+  .reveal section.asymptotic-performance td img {
+    height: 6em; }
+  .reveal .scrollable {
+    overflow-y: auto;
+    overflow-x: hidden;
+    height: 660px;
+    max-height: 660px;
+    margin: 0;
+    padding: 0; }
+  .reveal pre {
+    box-shadow: none; }
+    .reveal pre code {
+      max-height: inherit; }
+  .reveal p > code {
+    font-size: 0.75em; }
+  .reveal tt {
+    font-family: monospace; }
+  .reveal blockquote:before, .reveal blockquote:after {
+    font-size: 200%;
+    color: #888; }
+  .reveal blockquote:before {
+    position: absolute;
+    content: "“";
+    left: -0.5em;
+    top: -0.2em; }
+  .reveal blockquote:after {
+    position: relative;
+    content: "”";
+    line-height: 0;
+    top: 0.25em; }
+  .reveal blockquote {
+    box-shadow: none;
+    text-align: left; }
+
+svg {
+  overflow: visible;
+  max-width: 100%; }
+
+/*# sourceMappingURL=presentation.css.map */

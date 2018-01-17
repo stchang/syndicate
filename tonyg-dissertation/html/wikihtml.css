@@ -1,0 +1,12 @@
+pre.wikihtml span.wikitex-right {
+    position: relative;
+    display: inline-block;
+}
+pre.wikihtml span.wikitex-right span.wikitex-italic {
+    position: absolute;
+    right: 0;
+}
+pre.wikihtml span.wikitex-italic {
+    font-style: italic;
+    font-family: "TeXGyrePagella", "Palatino", "Palatino Linotype", "Palatino LT STD", serif;
+}
