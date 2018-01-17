@@ -15,7 +15,7 @@ Northeastern University, December 2017
    }}/papers/conversational-concurrency-201712310922.pdf), for
    printing or offline use. (1.8MB)
 
- - [Single-page HTML](html/), for reading online.
+ - [Single-page HTML](html/), for reading online. (1.7MB)
 
 On this page, you will find a
 [recording](#dissertation-defense-talk-recording) of my dissertation
