@@ -1,6 +1,8 @@
 ---
 title: PhD Dissertation of Tony Garnock-Jones
 layout: page
+link:
+  snapshot: 'syndicate-code-snapshot-20180124-1235.zip'
 ---
 
 # Conversational Concurrency
@@ -92,11 +94,19 @@ The slides from my defense talk are available
 
 ### Source code snapshot
 
-The source code for the Syndicate prototypes and example applications,
-as they were at the time of my dissertation, will be available here
-shortly. In the meantime, please see the downloads available at
-<http://syndicate-lang.org/> and
-<https://github.com/tonyg/syndicate/>.
+[This zip file]({{ page.link.snapshot }}) contains source code for the
+Syndicate prototypes and example applications, as they were at the
+time of my dissertation:
+
+<a href="{{ page.link.snapshot }}"><img class="leftfloat" alt="Link to Syndicate source code snapshot" src="{{ site.baseurl }}/img/fontawesome-arrow-alt-circle-down-64x64.png"></a>
+&nbsp;  
+Download [{{ page.link.snapshot }}]({{ page.link.snapshot }})
+
+<div class="clear"></div>
+
+Please see also the downloads available at
+[syndicate-lang.org](http://syndicate-lang.org/) and on
+[Github](https://github.com/tonyg/syndicate/).
 
 ### Proofs
 
