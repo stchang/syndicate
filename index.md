@@ -97,7 +97,11 @@ and for the JavaScript example,
 [This page](examples/) links to in-browser runnable demos (and source
 code) of Syndicate/js programs.
 
-## Code
+## Install
+
+Follow the instructions [here](install/).
+
+## Source Code
 
 Syndicate is implemented both for [Racket](http://racket-lang.org/)
 and for [JavaScript](https://en.wikipedia.org/wiki/ECMAScript).
