@@ -39,6 +39,7 @@ header {
     background: {{ page.heroheadercolor }};
     min-height: 4rem;
     font-family: {{ page.headerfont }};
+    color: #fff;
 }
 
 header > h1 {
