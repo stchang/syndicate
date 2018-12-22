@@ -1,5 +1,6 @@
 <!-- -*- html -*- -->
 <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<link rel="stylesheet" type="text/css" href="{{ site.baseurl }}/normalize.css" title="stylesheet" media="screen">
 <link rel="stylesheet" type="text/css" href="{{ site.baseurl }}/style.css" title="stylesheet" media="screen">
 {% for sheet in page.stylesheets %}
 <link rel="stylesheet" type="text/css" href="{{ site.baseurl }}/{{ sheet }}" media="screen">

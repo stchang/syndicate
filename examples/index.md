@@ -111,7 +111,7 @@ that he and his collaborators have been developing.
 
 ## TodoMVC
 
-<img src="todo/todomvc-screenshot.png" alt="TodoMVC Example" class="rightfloat">
+<div class="rightfloat"><img src="todo/todomvc-screenshot.png" alt="TodoMVC Example"></div>
 
 An implementation of a
 [standard challenge problem](http://todomvc.com/) for web programming:

@@ -1,6 +1,14 @@
 ---
 layout:
 
+pagesidemargins:
+  normal: "2rem"
+  skinny: "0.5rem"
+
+bodyfont: "Georgia, Times New Roman, Times, serif"
+headerfont: "sans"
+headingfont: "'Bree Serif', Georgia"
+
 bodybackground: "#bbb"
 pagebackground: "#fff"
 herobackground: "#fff"
@@ -10,445 +18,186 @@ headercolor: "#070764"
 heroheadercolor: "#BD1550"
 herotextcolor: "#000"
 linkcolor: "#4cbb17"
-
-textfonts: "'Lora', Georgia"
-headerfonts: "'Bree Serif', Georgia"
-codefonts: "'Inconsolata', monospace"
 ---
 
-/*---------------------------------------------------------------------------*/
-/* http://meyerweb.com/eric/tools/css/reset/ 
-   v2.0 | 20110126
-   License: none (public domain)
-*/
+html { box-sizing: border-box; }
+*, *:before, *:after { box-sizing: inherit; }
 
-html, body, div, span, applet, object, iframe,
-h1, h2, h3, h4, h5, h6, p, blockquote, pre,
-a, abbr, acronym, address, big, cite, code,
-del, dfn, em, img, ins, kbd, q, s, samp,
-small, strike, strong, sub, sup, tt, var,
-b, u, i, center,
-dl, dt, dd, ol, ul, li,
-fieldset, form, label, legend,
-table, caption, tbody, tfoot, thead, tr, th, td,
-article, aside, canvas, details, embed, 
-figure, figcaption, footer, header, hgroup, 
-menu, nav, output, ruby, section, summary,
-time, mark, audio, video {
-	margin: 0;
-	padding: 0;
-	border: 0;
-	font-size: 100%;
-	font: inherit;
-	vertical-align: baseline;
+html {
+    font-family: {{ page.bodyfont }};
+    font-size: 16pt;
+    line-height: 1.58;
 }
-/* HTML5 display-role reset for older browsers */
-article, aside, details, figcaption, figure, 
-footer, header, hgroup, menu, nav, section {
-	display: block;
-}
-body {
-	line-height: 1;
-}
-ol, ul {
-	list-style: none;
-}
-blockquote, q {
-	quotes: none;
-}
-blockquote:before, blockquote:after,
-q:before, q:after {
-	content: '';
-	content: none;
-}
-table {
-	border-collapse: collapse;
-	border-spacing: 0;
-}
-/*---------------------------------------------------------------------------*/
 
 body {
-    background: {{ page.bodybackground }};
-    color: {{ page.textcolor }};
+    background: #fff;
+    max-width: 62rem;
+    margin: 0 auto;
 }
 
-body, th, td, input, textarea {
-    font-family: {{ page.textfonts }};
-    font-size: 12pt;
-    color: {{ page.textcolor }};
+header {
+    background: {{ page.heroheadercolor }};
+    min-height: 4rem;
+    font-family: {{ page.headerfont }};
+}
+
+header > h1 {
+    float: left;
+    height: 4rem;
+    margin: 0;
+    padding: 0.5rem;
+    padding-left: 0;
+    font-size: 1.4rem;
+    line-height: 3rem;
+    white-space: nowrap;
+    color: #fff;
+}
+
+header > h1 img {
+    width: 3rem;
+    vertical-align: top;
+    line-height: 0rem;
+    margin: 0 0.5rem;
+}
+
+header > h1 .title {
+    font-family: {{ page.headingfont }};
+    padding: 0.25rem;
+}
+
+header > h1 .subtitle {
+    padding-left: 0.5rem;
+    font-size: 0.8rem;
 }
 
 h1, h2, h3, h4, h5, h6 {
-    font-family: {{ page.headerfonts }};
-}
-
-h1, h2, h3, h4 {
-    margin-top: 1em;
-    color: {{ page.headercolor }};
+    font-family: {{ page.headingfont }};
+    /* font-family: {{ page.headerfont }}; */
     font-weight: normal;
-}
-
-h1 a, h2 a, h3 a {
     color: {{ page.headercolor }};
 }
 
-h1 {
-    font-size: 2.8em;
-}
-
-h2 {
-    font-size: 2.1em;
-}
-
-h3 {
-    font-size: 1.4em;
-}
-
-h4 {
-    font-size: 1.2em;
-}
-h4 + p {
-    margin-top: 0.5em;
-}
-
-p, ul, ol {
-    margin-top: 1em;
-    line-height: 1.3em;
-    font-size: 1.1em;
-}
-
-ul ul {
-    margin-top: 0.5em;
-    font-size: 1em;
-}
-
-ul p, ol p {
-    font-size: 1em;
-}
-
-ul, ol {
-    margin-bottom: 0.5em;
-    margin-left: 3em;
-}
-
-ul { list-style-type: disc; }
-ol { list-style-type: decimal; }
-
-blockquote {
-    margin-left: 3em;
-    margin-right: 3em;
-}
-
-a {
-    text-decoration: none;
-    color: {{ page.linkcolor }};
-}
-
-hr {
-    border: none;
-    border-top: solid black 1px;
-}
-
-#page {
-    max-width: 800px;
-    margin: 0 auto;
-    background: {{ page.pagebackground }};
-    padding: 0 2em;
-}
-
-#header {
-    padding-bottom: 2px;
-    border-bottom: solid {{ page.textcolor }} 1px;
-}
-
-#header h2 {
-    float: right;
-}
-
-#header a {
-    font-variant: small-caps;
-}
-
-.historylinks {
-    text-align: center;
-}
-
-.historylinks.bottom {
-    margin-top: 10px;
-}
-
-.footnotes {
-    border-top: dashed {{ page.textcolor }} 1px;
-    font-size: 0.8em;
-    margin-top: 2em;
-}
-
-.content {
-    margin: 0;
-    padding: 0 3em;
-    min-height: 400px;
-}
-
-.content h1,
-.content h2,
-.content h3 {
-    margin-left: -3rem;
-}
-
-.content h4 {
-    margin-left: -1rem;
-}
-
-.content .entry_footer {
+nav.mainmenu {
     text-align: right;
 }
 
-.content p > img {
-    max-width: 100%;
-    max-height: 30em;
-    display: block;
-    margin: 0 auto;
+nav.mainmenu ul {
+    margin: 0;
+    /* display: inline-block; */
+    margin-right: {{ page.pagesidemargins.normal }};
+    padding-top: 1.15rem;
+    padding-bottom: 1.1rem;
 }
 
-.clear { clear: both; }
-.clearright { clear: right; }
-
-#footer {
-    padding: 0.5em 0;
-    margin-bottom: 1em;
+nav.mainmenu li {
+    display: inline;
+    vertical-align: text-top;
+    margin-left: 0.5rem;
 }
 
-#footer p {
-    text-align: center;
-    font-size: 8pt;
-    color: {{ page.linkcolor }};
+header a, header a:visited {
+    color: inherit;
+    text-decoration: none;
 }
 
-div.sitemap_subcategory {
-    margin-left: 2em;
+div.main-content-container {
+    max-width: 60rem;
+    margin: 0 {{ page.pagesidemargins.normal }};
 }
 
-.sitemap_categorylink {
-    font-size: 1.1em;
+main {
+    margin-top: {{ page.pagesidemargins.normal }};
+}
+
+main > *:not(section), section > *:not(section) {
+    max-width: 40rem;
+}
+
+footer {
+    clear: both;
+    margin: 0 {{ page.pagesidemargins.normal }};
+    margin-top: 2rem;
+    opacity: 0.5;
+    border-top: solid black 1px;
+    text-align: right;
+}
+
+.leftfloat, .rightfloat {
+    margin-bottom: 1rem;
+}
+
+.rightfloat {
+    float: right;
+    clear: right;
+    margin-left: 1rem;
+}
+
+.leftfloat {
+    float: left;
+    clear: left;
+    margin-right: 1rem;
 }
 
 .center {
     text-align: center;
 }
 
-img.sitelogo {
-    float: left;
-    margin: 15px;
+h1 a {
+    text-decoration: none;
 }
 
-.rightfloat, .leftfloat {
-    margin: 0.3em;
+div.footnotes:before {
+    content: '———';
+    opacity: 0.5;
 }
 
-a img {
-    border: 0;
-}
-
-.cornerpic {
-    float: right;
-    width: 250px;
-    padding: 1em;
-    padding-right: 0;
-    margin: 0;
-}
-
-.imagecenter {
-    text-align: center;
-    margin: 0.3em;
-}
-
-.leftfloat {
-    float: left;
-    margin-left: 0px;
-    margin-right: 1em;
-}
-.rightfloat {
-    float: right;
-    margin-left: 1em;
-    margin-right: 0px;
-}
-
-.topspace {
-    margin-top: 2em;
-}
-
-table {
-    margin-top: 1em;
-    margin-bottom: 1em;
-}
-
-th, td {
-    padding: 0.5em;
-    font-size: 0.88em;
-}
-
-th {
-    font-weight: normal;
-    color: {{ page.headercolor }};
-    text-align: right;
-    vertical-align: top;
-}
-
-td {
-    text-align: left;
-    vertical-align: top;
-}
-
-.mainmenu {
-    margin: 0px;
-}
-
-.mainmenu ul {
-    margin-top: 0;
-}
-
-.mainmenu ul li {
-    display: inline;
-    float: right;
-    text-align: center;
-    margin-left: 0.5em;
-    margin-right: 0.5em;
-}
-
-pre {
-    padding: 0.5em;
-    margin-top: 0.5em;
-    color: {{ page.codecolor }};
-    overflow: auto;
-}
-
-pre, code {
-    font-family: {{ page.codefonts }};
-    font-size: 110%;
-}
-
-sup {
-    line-height: 0;
-}
-
-small {
-    font-size: 80%;
-}
-
-strong {
-    font-weight: bold;
-}
-
-em {
-    font-style: italic;
+div.footnotes {
+    font-size: 0.9rem;
 }
 
 /*---------------------------------------------------------------------------*/
 
-.pagebanner h1,
-.pagebanner h2 {
-    margin: 0;
-    padding-top: 0.5rem;
-    padding-bottom: 1rem;
-    color: white;
-}
-
-.pagebanner a {
-    color: white;
-}
-
-.pagebanner h1 {
-    text-align: right;
-}
-
-.pagebanner h2 {
-    display: none;
-}
-
-.pagebanner {
-    margin: 0 -2em;
-    background-color: {{ page.heroheadercolor }};
-    padding: 0em 1em;
-}
-
-#page.frontpage .pagebanner h1,
-#page.frontpage .pagebanner h2 {
-    text-align: center;
-    margin: 0 auto;
-    color: white;
-}
-
-#page.frontpage .pagebanner h1 {
-    font-size: 5.6em;
-    padding-top: 1.5rem;
-}
-
-#page.frontpage .pagebanner h2 {
-    font-size: 2.1em;
-    padding: 0 0 2rem 0;
-    display: block;
-}
-
-#page.frontpage .pagebanner {
-    margin: 0 -2em;
-    background-color: {{ page.heroheadercolor }};
-    padding: 0em 2em;
-}
-
-#page.frontpage .frontpage_code_examples {
+div.frontpage_code_examples {
+    max-width: 100%;
     display: flex;
-    flex-direction: row;
-    flex-wrap: wrap;
-    margin-top: 1em;
+    flex-direction:row;
 }
 
-#page.frontpage .frontpage_code_examples div {
-    flex-grow: 1;
-    text-align: center;
-    background: #eee;
-    margin: 0.2em;
+div.frontpage_code_examples > div {
+    width: 50%;
 }
 
-#page.frontpage .frontpage_code_examples pre {
-    font-size: 105%;
-    display: inline-block;
-    text-align: left;
-    margin: 0;
+a, a:visited {
+    color: {{ page.linkcolor }};
 }
 
 /*---------------------------------------------------------------------------*/
 
-div.linkbuttons {
-    text-align: center;
-    padding-top: 1em;
-}
+@media screen and (max-width: 42rem) {
+    /* body { */
+    /*     background: red; */
+    /* } */
 
-/*---------------------------------------------------------------------------*/
-
-@media (max-width: 600px) {
-    #page {
-        padding: 0 0.5em;
-    }
-
-    .content {
-        padding: 0;
-    }
-
-    .content h1,
-    .content h2,
-    .content h3 {
+    .image_align_left, .image_align_right {
+        float: none;
         margin-left: 0;
+        margin-right: 0;
+        text-align: center;
     }
 
-    .pagebanner {
-        margin: 0 -0.5em;
+    div.main-content-container {
+        margin: 0 {{ page.pagesidemargins.skinny }};
     }
 
-    #page.frontpage .pagebanner h1 {
-        font-size: 17vw;
+    footer {
+        margin: 0 {{ page.pagesidemargins.skinny }};
     }
 
-    #page.frontpage .pagebanner {
-        margin: 0 -0.5em;
+    nav.mainmenu ul {
+        margin-right: {{ page.pagesidemargins.skinny }};
+    }
+
+    main {
+        margin-top: {{ page.pagesidemargins.skinny }};
     }
 }

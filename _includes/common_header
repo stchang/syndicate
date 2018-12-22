@@ -1,5 +1,5 @@
 <!-- -*- html -*- -->
-<div class="pagebanner">
-  <h1><a href="{{ site.baseurl }}/">{{ site.title }}</a></h1>
-  <h2>{{ site.subtitle }}</h2>
-</div>
+<header>
+  <h1><a href="{{ site.baseurl }}/"><img src="{{ site.baseurl }}/syndicate.png"><span class="title">{{ site.title }}</span></a><span class="subtitle">{{ site.subtitle }}</span></h1>
+  {% include common_nav %}
+</header>

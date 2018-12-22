@@ -6,10 +6,11 @@
 </head>
 <body>
  <div id="page" class="{{ page.class }}">
-   {% include common_nav %}
    {% include common_header %}
-   <div class="content">
-     {{ content }}
+   <div class="main-content-container">
+     <main class="content">
+       {{ content }}
+     </main>
    </div>
    {% include common_footer %}
  </div>
