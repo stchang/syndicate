@@ -181,7 +181,7 @@ a, a:visited {
     /*     background: red; */
     /* } */
 
-    .image_align_left, .image_align_right {
+    .leftfloat, .rightfloat {
         float: none;
         margin-left: 0;
         margin-right: 0;
