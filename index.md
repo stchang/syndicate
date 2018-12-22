@@ -7,16 +7,6 @@ link:
   docs: 'http://docs.racket-lang.org/syndicate@syndicate/index.html'
 ---
 
-**noun**  
-/ˈsindikit/
-
-1. a self-organizing group of individuals, companies, corporations or
-   entities formed to transact some specific business, to pursue or
-   promote a shared interest.
-   <small>—[Wikipedia](https://en.wikipedia.org/wiki/Syndicate)</small>
-
-<div></div>
-
 <!-- # Motivation -->
 
 <!-- Every interactive program needs some way of -->
@@ -39,7 +29,7 @@ link:
 <!-- Syndicate is a language designed to help organise interactive -->
 <!-- programs. -->
 
-## Overview
+# Syndicate
 
 Syndicate is an Actor-based programming language offering
 
