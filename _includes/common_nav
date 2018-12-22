@@ -1,9 +1,10 @@
 <!-- -*- html -*- -->
 <nav class="mainmenu">
   <ul>
-    <li><a href="/#documentation">Docs</a></li>
-    <li><a href="/examples/">Demos</a></li>
-    <li><a href="/install/">Installation</a></li>
+    <li><a href="{{ site.baseurl }}/">Home</a></li>
+    <li><a href="{{ site.baseurl }}/#documentation">Docs</a></li>
+    <li><a href="{{ site.baseurl }}/examples/">Demos</a></li>
+    <li><a href="{{ site.baseurl }}/install/">Installation</a></li>
     <li><a href="https://github.com/tonyg/syndicate">Github</a></li>
   </ul>
 </nav>
