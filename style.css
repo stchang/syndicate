@@ -162,10 +162,12 @@ div.frontpage_code_examples {
     max-width: 100%;
     display: flex;
     flex-direction:row;
+    flex-wrap: wrap;
+    justify-content: center;
 }
 
 div.frontpage_code_examples > div {
-    width: 50%;
+    min-width: 24rem;
 }
 
 a, a:visited {
