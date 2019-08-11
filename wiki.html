@@ -163,6 +163,8 @@ Error message and password prompt
 
 <li>$:/state/tab-2065006209</li>
 
+<li>$:/state/tab/moresidebar-1850697562</li>
+
 <li>$:/state/tab/sidebar--595412856</li>
 
 <li>$:/status/UserName</li>
@@ -9210,13 +9212,16 @@ very-muted-foreground: #888888</pre>
 <div created="20190806212803060" creator="Tony Garnock-Jones" modified="20190806212810597" modifier="Tony Garnock-Jones" title="$:/state/tab-2065006209">
 <pre>$:/core/ui/ControlPanel/Saving/DownloadSaver</pre>
 </div>
-<div created="20190806214656574" creator="Tony Garnock-Jones" modified="20190806214658042" modifier="Tony Garnock-Jones" title="$:/state/tab/sidebar--595412856">
+<div created="20190811142204308" creator="Tony Garnock-Jones" modified="20190811142204309" modifier="Tony Garnock-Jones" title="$:/state/tab/moresidebar-1850697562">
+<pre>$:/core/ui/MoreSideBar/Missing</pre>
+</div>
+<div created="20190806214656574" creator="Tony Garnock-Jones" modified="20190811142324891" modifier="Tony Garnock-Jones" title="$:/state/tab/sidebar--595412856">
 <pre>$:/core/ui/SideBar/Open</pre>
 </div>
 <div created="20190806212540369" creator="T" modified="20190806212639373" modifier="Tony GarnockJones" title="$:/status/UserName">
 <pre>Tony Garnock-Jones</pre>
 </div>
-<div created="20190810123111641" creator="Tony Garnock-Jones" list="Welcome [[Model of concurrency]]" modified="20190810123111641" modifier="Tony Garnock-Jones" title="$:/StoryList">
+<div created="20190811142132288" creator="Tony Garnock-Jones" list="Welcome" modified="20190811142132288" modifier="Tony Garnock-Jones" title="$:/StoryList">
 <pre></pre>
 </div>
 <div plugin-type="info" title="$:/temp/info-plugin" type="application/json">
@@ -9388,12 +9393,12 @@ very-muted-foreground: #888888</pre>
 * https://tonyg.github.io/hopl-s2017/conversational-context-and-concurrency/
 * https://eighty-twenty.org/2016/10/18/actors-hopl</pre>
 </div>
-<div created="20190806213218362" creator="Tony Garnock-Jones" modified="20190810135206860" modifier="Tony Garnock-Jones" title="Welcome">
+<div created="20190806213218362" creator="Tony Garnock-Jones" modified="20190811142336990" modifier="Tony Garnock-Jones" title="Welcome">
 <pre>!! A new model of concurrency
 
 Syndicate is a new [[model of concurrency|Model of concurrency]], closely related to the [[actor|Actor model]], [[tuplespace|Tuplespace model]], and [[fact space|Fact space model]] models. It is made up of two interacting parts:
 
-* The [[dataspace model]] describes how programs (objects, virtual machines, hosts, etc.) interact in terms of a [[conversational model]]; and
+* The [[dataspace model|Dataspace model]] describes how programs (objects, virtual machines, hosts, etc.) interact in terms of a [[conversational model|Conversational model]]; and
 * [[Facet]]s are language constructs added to a programming language to help the programmer organise their interactive programs when using the dataspace model.
 
 !! Multiple programming language support
@@ -9409,8 +9414,8 @@ Syndicate implementations form an ecosystem, with interoperating implementations
 The Syndicate model can be extended to the distributed case. [[Distributed Syndicate]] is made up of four pieces:
 
 * a data format called [[Preserves]], similar to JSON, but with well-defined semantics;
-* a simple [[network protocol]] that extends the dataspace model across TCP/IP links;
-* a capability-style [[security architecture]] that allows flexible access control to Syndicate spaces; and
+* a simple [[network protocol|Network protocol]] that extends the dataspace model across TCP/IP links;
+* a capability-style [[security architecture|Security architecture]] that allows flexible access control to Syndicate spaces; and
 * a [[federated client-server architecture|Federated Syndicate]] for scalable, decentralized applications.
 </pre>
 </div>
